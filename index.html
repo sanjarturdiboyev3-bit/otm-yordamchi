@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>O'qituvchi Yordamchisi</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; background:#F5F4F0; font-family:'Manrope',sans-serif; color:#2A2A2A; }
+  .serif { font-family:'Source Serif 4', Georgia, serif; }
+  .wrap { max-width:1000px; margin:0 auto; padding:24px; }
+  header { display:flex; align-items:center; gap:12px; margin-bottom:24px; }
+  .logo { width:44px; height:44px; border-radius:50%; background:#16213E; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:20px; }
+  h1 { font-size:24px; font-weight:700; color:#16213E; margin:0; font-family:'Source Serif 4',Georgia,serif; }
+  .subtitle { font-size:14px; color:#6B7280; margin:2px 0 0; }
+  .card { background:#fff; border:1px solid #E5E3DC; border-radius:16px; box-shadow:0 1px 2px rgba(0,0,0,0.03); }
+  .form-card { padding:24px; margin-bottom:24px; }
+  .form-grid { display:grid; grid-template-columns:1fr; gap:16px; }
+  @media(min-width:700px){ .form-grid{ grid-template-columns:1fr 1fr 1fr; } }
+  label { display:block; font-size:12px; font-weight:600; color:#6B7280; margin-bottom:4px; }
+  input, select { width:100%; padding:9px 12px; border-radius:8px; border:1px solid #E5E3DC; font-family:inherit; font-size:14px; }
+  .grid2 { display:grid; grid-template-columns:1fr; gap:20px; }
+  @media(min-width:700px){ .grid2{ grid-template-columns:1fr 1fr; } }
+  .item-card-head { padding:20px; display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+  .item-left { display:flex; gap:12px; align-items:center; }
+  .icon-box { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:18px; }
+  .item-title { font-weight:700; font-size:15px; color:#16213E; margin:0; }
+  .item-desc { font-size:12px; color:#6B7280; margin:2px 0 0; }
+  .price-badge { background:#C9942A; color:#fff; font-size:12px; font-weight:700; padding:4px 12px; border-radius:999px; white-space:nowrap; }
+  .item-body { padding:0 20px 20px; }
+  button.generate { width:100%; padding:11px; border:none; border-radius:8px; font-weight:600; font-size:14px; cursor:pointer; background:#16213E; color:#fff; display:flex; align-items:center; justify-content:center; gap:8px; }
+  button.generate:disabled { background:#E5E3DC; color:#6B7280; cursor:not-allowed; }
+  .error-text { color:#B23A3A; font-size:12px; margin-top:8px; }
+  .result-box { margin-top:16px; padding:14px; border-radius:10px; background:#F9F8F5; border:1px solid #EDEBE3; font-size:13px; line-height:1.6; white-space:pre-wrap; max-height:300px; overflow-y:auto; }
+  .footer-total { text-align:center; margin-top:24px; font-size:14px; color:#6B7280; }
+  .spin { display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,0.4); border-top-color:#fff; border-radius:50%; animation:spin 0.7s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">🎓</div>
+    <div>
+      <h1>O'qituvchi Yordamchisi</h1>
+      <p class="subtitle">Bitta mavzu — to'rtta tayyor dars materiali, sun'iy intellekt yordamida</p>
+    </div>
+  </header>
+
+  <div class="card form-card">
+    <div class="form-grid">
+      <div>
+        <label>FAN</label>
+        <input id="fan" value="Matematika" />
+      </div>
+      <div>
+        <label>MAVZU</label>
+        <input id="mavzu" placeholder="masalan: Matritsalar va amallar" />
+      </div>
+      <div>
+        <label>DARAJA</label>
+        <select id="daraja">
+          <option>Maktab</option>
+          <option>Kollej</option>
+          <option selected>OTM (bakalavriat)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2" id="cards"></div>
+
+  <div class="footer-total" id="total" style="display:none;"></div>
+</div>
+
+<script>
+const META = {
+  material: { title:"O'quv materiali", icon:"📄", price:5000, desc:"Mavzu bo'yicha tushuntirish, ta'rif, misol", color:"#2F5D50" },
+  slayd: { title:"Taqdimot slaydlari", icon:"📊", price:5000, desc:"Dars taqdimoti uchun slaydlar rejasi", color:"#8A5A2E" },
+  mashq: { title:"Amaliy mashqlar", icon:"📝", price:5000, desc:"Yechimli va mustaqil ishlash mashqlari", color:"#4A5D8A" },
+  test: { title:"Test savollari", icon:"✅", price:5000, desc:"Ko'p tanlovli testlar va javoblar kaliti", color:"#8A3A4A" },
+};
+
+const results = {};
+
+function buildPrompt(type, fan, mavzu, daraja) {
+  const base = `Fan: ${fan}. Mavzu: ${mavzu}. Ta'lim darajasi: ${daraja}.`;
+  const map = {
+    material: `${base}\n\nSiz tajribali pedagog va fan mutaxassisisiz. Shu mavzu bo'yicha qisqa, mazmunli o'quv materiali yozing: (1) mavzuga kirish va ahamiyati, (2) asosiy ta'rif va tushunchalar, (3) kamida bitta batafsil ishlangan misol, (4) mavzuning amaliy qo'llanilishi. O'zbek tilida, aniq sarlavhalar bilan tuzing.`,
+    slayd: `${base}\n\nShu mavzu bo'yicha taqdimot uchun 9-10 ta slayd rejasini tuzing. Har bir slayd uchun "Slayd N: Sarlavha" va 3-4 ta qisqa bullet fikr yozing. O'zbek tilida yozing.`,
+    mashq: `${base}\n\nShu mavzu bo'yicha 8-10 ta amaliy mashq tuzing: birinchi 3-4 tasi TO'LIQ YECHIMI bilan, qolganlari mustaqil bajarish uchun (faqat javob, yechimsiz). Aniq raqamlab, o'zbek tilida yozing.`,
+    test: `${base}\n\nShu mavzu bo'yicha 14-16 ta ko'p tanlovli test savoli tuzing (A,B,C,D variantlari bilan). Oxirida "Javoblar kaliti:" deb barcha to'g'ri javoblarni bering. O'zbek tilida, ixcham yozing.`,
+  };
+  return map[type];
+}
+
+function render() {
+  const cardsEl = document.getElementById('cards');
+  cardsEl.innerHTML = '';
+  Object.entries(META).forEach(([type, meta]) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="item-card-head">
+        <div class="item-left">
+          <div class="icon-box" style="background:${meta.color}1A;">${meta.icon}</div>
+          <div>
+            <p class="item-title">${meta.title}</p>
+            <p class="item-desc">${meta.desc}</p>
+          </div>
+        </div>
+        <div class="price-badge">${meta.price.toLocaleString()} so'm</div>
+      </div>
+      <div class="item-body">
+        <button class="generate" data-type="${type}">✨ Yaratish</button>
+        <div class="error-text" data-error="${type}" style="display:none;"></div>
+        <div class="result-box" data-result="${type}" style="display:none;"></div>
+      </div>
+    `;
+    cardsEl.appendChild(card);
+  });
+
+  document.querySelectorAll('button.generate').forEach(btn => {
+    btn.addEventListener('click', () => generate(btn.dataset.type));
+  });
+}
+
+async function generate(type) {
+  const fan = document.getElementById('fan').value || 'Fan';
+  const mavzu = document.getElementById('mavzu').value.trim();
+  const daraja = document.getElementById('daraja').value;
+  const errorEl = document.querySelector(`[data-error="${type}"]`);
+  const resultEl = document.querySelector(`[data-result="${type}"]`);
+  const btn = document.querySelector(`button[data-type="${type}"]`);
+
+  if (!mavzu) {
+    errorEl.textContent = "Avval mavzuni kiriting.";
+    errorEl.style.display = 'block';
+    return;
+  }
+  errorEl.style.display = 'none';
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Yaratilmoqda...';
+
+  try {
+    const prompt = buildPrompt(type, fan, mavzu, daraja);
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
+    });
+    if (!res.ok) throw new Error('Server xatosi');
+    const data = await res.json();
+    results[type] = true;
+    resultEl.textContent = data.text;
+    resultEl.style.display = 'block';
+    updateTotal();
+  } catch (e) {
+    errorEl.textContent = "Xatolik yuz berdi. Qayta urinib ko'ring.";
+    errorEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '✨ Yaratish';
+  }
+}
+
+function updateTotal() {
+  const count = Object.keys(results).length;
+  const totalEl = document.getElementById('total');
+  if (count > 0) {
+    totalEl.style.display = 'block';
+    totalEl.innerHTML = `Hozircha yaratilgan: ${count} ta material — jami qiymati: <strong style="color:#16213E;">${(count*5000).toLocaleString()} so'm</strong>`;
+  }
+}
+
+render();
+</script>
+</body>
+</html>
