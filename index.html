@@ -123,16 +123,9 @@ const CLICK_MERCHANT_ID = "SIZNING_MERCHANT_ID";
 
 const results = {};
 
-function buildPrompt(type, fan, mavzu, daraja) {
-  const base = `Fan: ${fan}. Mavzu: ${mavzu}. Ta'lim darajasi: ${daraja}.`;
-  const map = {
-    material: `${base}\n\nSiz tajribali pedagog va fan mutaxassisisiz. Shu mavzu bo'yicha qisqa, mazmunli o'quv materiali yozing: (1) mavzuga kirish va ahamiyati, (2) asosiy ta'rif va tushunchalar, (3) kamida bitta batafsil ishlangan misol, (4) mavzuning amaliy qo'llanilishi. O'zbek tilida, aniq sarlavhalar bilan tuzing.`,
-    slayd: `${base}\n\nShu mavzu bo'yicha taqdimot uchun 9-10 ta slayd rejasini tuzing. Har bir slayd uchun "Slayd N: Sarlavha" va 3-4 ta qisqa bullet fikr yozing. O'zbek tilida yozing.`,
-    mashq: `${base}\n\nShu mavzu bo'yicha 8-10 ta amaliy mashq tuzing: birinchi 3-4 tasi TO'LIQ YECHIMI bilan, qolganlari mustaqil bajarish uchun (faqat javob, yechimsiz). Aniq raqamlab, o'zbek tilida yozing.`,
-    test: `${base}\n\nShu mavzu bo'yicha 14-16 ta ko'p tanlovli test savoli tuzing (A,B,C,D variantlari bilan). Oxirida "Javoblar kaliti:" deb barcha to'g'ri javoblarni bering. O'zbek tilida, ixcham yozing.`,
-  };
-  return map[type];
-}
+// Diqqat: prompt matni endi mijoz tomonida QURILMAYDI — buni serverga
+// (api/generate.js) ko'chirdik, chunki avvalgi usulda istalgan kishi
+// /api/generate'ga to'g'ridan-to'g'ri o'zi xohlagan promptni yuborishi mumkin edi.
 
 function renderContent(el, text) {
   // Avval $$...$$ va $...$ ichidagi LaTeX formulalarni matndan ajratib olamiz,
@@ -354,12 +347,16 @@ async function generate(type) {
     : '<span class="spin"></span> Yaratilmoqda...';
 
   try {
-    const prompt = buildPrompt(type, fan, mavzu, daraja);
     const res = await fetch('/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, useSearch }),
+      body: JSON.stringify({ type, fan, mavzu, daraja, useSearch }),
     });
+    if (res.status === 429) {
+      errorEl.textContent = "Juda ko'p so'rov yubordingiz. Birozdan keyin qayta urinib ko'ring.";
+      errorEl.style.display = 'block';
+      return;
+    }
     if (!res.ok) throw new Error('Server xatosi');
     const data = await res.json();
     renderContent(resultEl, data.text);
@@ -380,8 +377,32 @@ function updateTotal() {
   if (count > 0) {
     totalEl.style.display = 'block';
     totalEl.innerHTML = `To'langan materiallar: ${count} ta — jami: <strong style="color:#16213E;">${(count*5000).toLocaleString()} so'm</strong>`;
+  } else {
+    totalEl.style.display = 'none';
   }
 }
+
+// Fan/Mavzu/Daraja o'zgarsa, eski natija va "to'landi" belgisini tozalaymiz.
+// Aks holda ikkita muammo bo'lardi: (1) eskirgan natija ekranda qolib,
+// yangi mavzuga tegishlidek ko'rinadi; (2) bir marta to'lagandan keyin
+// mavzuni almashtirib, yangi materialni bepul olish mumkin bo'lardi.
+function resetAllCards() {
+  Object.keys(META).forEach(type => {
+    const resultEl = document.querySelector(`[data-result="${type}"]`);
+    const actionsEl = document.querySelector(`[data-actions="${type}"]`);
+    const errorEl = document.querySelector(`[data-error="${type}"]`);
+    if (resultEl) { resultEl.style.display = 'none'; resultEl.innerHTML = ''; }
+    if (actionsEl) { actionsEl.style.display = 'none'; actionsEl.innerHTML = ''; }
+    if (errorEl) { errorEl.style.display = 'none'; }
+    delete results[type];
+  });
+  updateTotal();
+}
+
+['fan', 'mavzu', 'daraja'].forEach(id => {
+  document.getElementById(id).addEventListener('input', resetAllCards);
+  document.getElementById(id).addEventListener('change', resetAllCards);
+});
 
 render();
 checkPendingPayment();
