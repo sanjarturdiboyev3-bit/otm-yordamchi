@@ -248,6 +248,12 @@ function showChecking(type) {
 }
 
 function payWithClick(type) {
+  if (CLICK_SERVICE_ID === 'SIZNING_SERVICE_ID' || CLICK_MERCHANT_ID === 'SIZNING_MERCHANT_ID') {
+    // Click hisobi hali ulanmagan — buzilgan sahifaga emas, tushunarli xabarga yo'naltiramiz.
+    const box = document.querySelector(`[data-actions="${type}"]`);
+    box.innerHTML = `<div class="pay-gate"><p class="pay-gate-text" style="color:#B23A3A;">To'lov tizimi hali sozlanmoqda. Iltimos, birozdan keyin qayta urinib ko'ring.</p></div>`;
+    return;
+  }
   const orderId = `otm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   localStorage.setItem('pending_order', JSON.stringify({ orderId, type }));
   const returnUrl = `${window.location.origin}${window.location.pathname}?paid_order=${orderId}&paid_type=${type}`;
