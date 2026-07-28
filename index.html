@@ -109,10 +109,10 @@
 
 <script>
 const META = {
-  material: { title:"O'quv materiali", icon:"📄", price:5000, desc:"Mavzu bo'yicha tushuntirish, ta'rif, misol", color:"#2F5D50" },
-  slayd: { title:"Taqdimot slaydlari", icon:"📊", price:5000, desc:"Dars taqdimoti uchun slaydlar rejasi", color:"#8A5A2E" },
-  mashq: { title:"Amaliy mashqlar", icon:"📝", price:5000, desc:"Yechimli va mustaqil ishlash mashqlari", color:"#4A5D8A" },
-  test: { title:"Test savollari", icon:"✅", price:5000, desc:"Ko'p tanlovli testlar va javoblar kaliti", color:"#8A3A4A" },
+  material: { title:"O'quv materiali", icon:"📄", price:4990, desc:"Mavzu bo'yicha tushuntirish, ta'rif, misol", color:"#2F5D50" },
+  slayd: { title:"Taqdimot slaydlari", icon:"📊", price:4990, desc:"Dars taqdimoti uchun slaydlar rejasi", color:"#8A5A2E" },
+  mashq: { title:"Amaliy mashqlar", icon:"📝", price:4990, desc:"Yechimli va mustaqil ishlash mashqlari", color:"#4A5D8A" },
+  test: { title:"Test savollari", icon:"✅", price:4990, desc:"Ko'p tanlovli testlar va javoblar kaliti", color:"#8A3A4A" },
 };
 
 // Click kabinetingizdagi haqiqiy qiymatlar bilan almashtiring (Merchant cabinet -> Sozlamalar).
@@ -234,7 +234,7 @@ function showPayGate(type) {
   box.style.display = 'block';
   box.innerHTML = `
     <div class="pay-gate">
-      <p class="pay-gate-text">✅ Materialingiz tayyor!<br>Yuklab olish uchun to'lov qiling — 5 000 so'm</p>
+      <p class="pay-gate-text">✅ Materialingiz tayyor!<br>Yuklab olish uchun to'lov qiling — 4 990 so'm</p>
       <button class="btn-pay" data-pay="${type}">💳 Click orqali to'lash</button>
     </div>
   `;
@@ -254,7 +254,7 @@ function payWithClick(type) {
   const params = new URLSearchParams({
     service_id: CLICK_SERVICE_ID,
     merchant_id: CLICK_MERCHANT_ID,
-    amount: '5000',
+    amount: '4990',
     transaction_param: orderId,
     return_url: returnUrl,
   });
@@ -361,7 +361,13 @@ async function generate(type) {
     const data = await res.json();
     renderContent(resultEl, data.text);
     resultEl.style.display = 'block';
-    showPayGate(type);
+    if (data.isFree) {
+      results[type] = true;
+      showDownloadButtons(type);
+      updateTotal();
+    } else {
+      showPayGate(type);
+    }
   } catch (e) {
     errorEl.textContent = "Xatolik yuz berdi. Qayta urinib ko'ring.";
     errorEl.style.display = 'block';
@@ -376,7 +382,7 @@ function updateTotal() {
   const totalEl = document.getElementById('total');
   if (count > 0) {
     totalEl.style.display = 'block';
-    totalEl.innerHTML = `To'langan materiallar: ${count} ta — jami: <strong style="color:#16213E;">${(count*5000).toLocaleString()} so'm</strong>`;
+    totalEl.innerHTML = `To'langan materiallar: ${count} ta — jami: <strong style="color:#16213E;">${(count*4990).toLocaleString()} so'm</strong>`;
   } else {
     totalEl.style.display = 'none';
   }
