@@ -40,18 +40,20 @@
   button.generate { width:100%; padding:11px; border:none; border-radius:8px; font-weight:600; font-size:14px; cursor:pointer; background:#16213E; color:#fff; display:flex; align-items:center; justify-content:center; gap:8px; }
   button.generate:disabled { background:#E5E3DC; color:#6B7280; cursor:not-allowed; }
   .error-text { color:#B23A3A; font-size:12px; margin-top:8px; }
-  .result-box { margin-top:16px; padding:14px 16px; border-radius:10px; background:#F9F8F5; border:1px solid #EDEBE3; font-size:13px; line-height:1.65; max-height:460px; overflow-y:auto; overflow-x:hidden; }
-  .result-box h1, .result-box h2, .result-box h3 { font-family:'Source Serif 4',Georgia,serif; color:#16213E; font-size:15px; margin:14px 0 6px; }
-  .result-box h1:first-child, .result-box h2:first-child, .result-box h3:first-child, .result-box p:first-child { margin-top:0; }
-  .result-box p { margin:8px 0; }
-  .result-box ul, .result-box ol { margin:8px 0; padding-left:20px; }
-  .result-box li { margin:4px 0; }
-  .result-box strong { color:#16213E; }
-  .result-box table { border-collapse:collapse; width:100%; margin:10px 0; font-size:12px; }
-  .result-box th, .result-box td { border:1px solid #E5E3DC; padding:6px 8px; text-align:left; }
-  .result-box th { background:#F0EFEA; }
-  .result-box hr { border:none; border-top:1px solid #E5E3DC; margin:14px 0; }
-  .result-box .katex-display { margin:10px 0; overflow-x:auto; overflow-y:hidden; }
+  .result-box { margin-top:16px; padding:14px 16px; border-radius:10px; background:#F9F8F5; border:1px solid #EDEBE3; font-size:13px; line-height:1.65; max-height:260px; overflow-y:auto; overflow-x:hidden; }
+  .summary-hint { font-size:11px; color:#6B7280; margin:6px 0 0; font-style:italic; }
+  .full-content { max-height:0; overflow:hidden; }
+  .result-box h1, .result-box h2, .result-box h3, .full-content h1, .full-content h2, .full-content h3 { font-family:'Source Serif 4',Georgia,serif; color:#16213E; font-size:15px; margin:14px 0 6px; }
+  .result-box h1:first-child, .result-box h2:first-child, .result-box h3:first-child, .result-box p:first-child, .full-content h1:first-child, .full-content h2:first-child, .full-content h3:first-child, .full-content p:first-child { margin-top:0; }
+  .result-box p, .full-content p { margin:8px 0; }
+  .result-box ul, .result-box ol, .full-content ul, .full-content ol { margin:8px 0; padding-left:20px; }
+  .result-box li, .full-content li { margin:4px 0; }
+  .result-box strong, .full-content strong { color:#16213E; }
+  .result-box table, .full-content table { border-collapse:collapse; width:100%; margin:10px 0; font-size:12px; }
+  .result-box th, .result-box td, .full-content th, .full-content td { border:1px solid #E5E3DC; padding:6px 8px; text-align:left; }
+  .result-box th, .full-content th { background:#F0EFEA; }
+  .result-box hr, .full-content hr { border:none; border-top:1px solid #E5E3DC; margin:14px 0; }
+  .result-box .katex-display, .full-content .katex-display { margin:10px 0; overflow-x:auto; overflow-y:hidden; }
   .actions-row { display:flex; gap:8px; margin-top:10px; }
   .btn-download { flex:1; padding:9px; border-radius:8px; border:1px solid #E5E3DC; background:#fff; color:#16213E; font-weight:600; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; }
   .btn-download:hover { background:#F5F4F0; }
@@ -157,33 +159,32 @@ function renderContent(el, text) {
   el.innerHTML = html;
 }
 
-function downloadAsPDF(resultEl, filename) {
-  // result-box balandligi cheklangan va scroll qilinadigan qilib qo'yilgan,
-  // shuning uchun to'liq tarkibni PDF qilish uchun cheklovsiz nusxasini yasab,
-  // ekrandan tashqarida vaqtincha joylashtiramiz.
-  const clone = resultEl.cloneNode(true);
-  clone.style.maxHeight = 'none';
-  clone.style.overflow = 'visible';
-  clone.style.width = resultEl.offsetWidth + 'px';
-  clone.style.position = 'fixed';
-  clone.style.left = '-9999px';
-  clone.style.top = '0';
-  document.body.appendChild(clone);
+async function downloadAsPDF(el, filename) {
+  // Avvalgi usul (ekrandan -9999px surilgan nusxa) html2canvas'da ko'pincha
+  // BO'SH sahifa hosil qilardi. Ishonchli usul: elementni o'z joyida vaqtincha
+  // to'liq balandlikka kengaytirib suratga olamiz, so'ng qaytaramiz.
+  const prevMaxHeight = el.style.maxHeight;
+  const prevOverflow = el.style.overflow;
+  el.style.maxHeight = 'none';
+  el.style.overflow = 'visible';
 
-  return html2pdf().from(clone).set({
-    margin: 10,
-    filename: filename + '.pdf',
-    html2canvas: { scale: 2, useCORS: true },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-  }).save().finally(() => {
-    document.body.removeChild(clone);
-  });
+  try {
+    await html2pdf().from(el).set({
+      margin: 10,
+      filename: filename + '.pdf',
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    }).save();
+  } finally {
+    el.style.maxHeight = prevMaxHeight;
+    el.style.overflow = prevOverflow;
+  }
 }
 
-function downloadAsWord(resultEl, filename) {
+function downloadAsWord(el, filename) {
   const pre = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>" + filename + "</title></head><body style=\"font-family:Calibri,Arial,sans-serif;\">";
   const post = '</body></html>';
-  const html = pre + resultEl.innerHTML + post;
+  const html = pre + el.innerHTML + post;
   const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -196,13 +197,13 @@ function downloadAsWord(resultEl, filename) {
 }
 
 async function handlePdfClick(type, btn) {
-  const resultEl = document.querySelector(`[data-result="${type}"]`);
+  const fullEl = document.querySelector(`[data-full="${type}"]`);
   const name = buildFilename(type);
   const old = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = '<span class="spin spin-dark"></span> Tayyorlanmoqda...';
   try {
-    await downloadAsPDF(resultEl, name);
+    await downloadAsPDF(fullEl, name);
   } catch (e) {
     alert("PDF yaratishda xatolik yuz berdi. Qayta urinib ko'ring.");
   } finally {
@@ -212,8 +213,8 @@ async function handlePdfClick(type, btn) {
 }
 
 function handleWordClick(type) {
-  const resultEl = document.querySelector(`[data-result="${type}"]`);
-  downloadAsWord(resultEl, buildFilename(type));
+  const fullEl = document.querySelector(`[data-full="${type}"]`);
+  downloadAsWord(fullEl, buildFilename(type));
 }
 
 function showDownloadButtons(type) {
@@ -314,6 +315,8 @@ function render() {
         <button class="generate" data-type="${type}">✨ Yaratish</button>
         <div class="error-text" data-error="${type}" style="display:none;"></div>
         <div class="result-box" data-result="${type}" style="display:none;"></div>
+        <p class="summary-hint" data-hint="${type}" style="display:none;">To'liq, batafsil va ilmiy asoslangan versiya PDF/Word formatida yuklab olinadi.</p>
+        <div class="full-content" data-full="${type}"></div>
         <div class="actions-row" data-actions="${type}" style="display:none;"></div>
       </div>
     `;
@@ -365,8 +368,11 @@ async function generate(type) {
     }
     if (!res.ok) throw new Error('Server xatosi');
     const data = await res.json();
-    renderContent(resultEl, data.text);
+    renderContent(resultEl, data.summary);
     resultEl.style.display = 'block';
+    const fullEl = document.querySelector(`[data-full="${type}"]`);
+    renderContent(fullEl, data.full);
+    document.querySelector(`[data-hint="${type}"]`).style.display = 'block';
     if (data.isFree) {
       results[type] = true;
       showDownloadButtons(type);
@@ -403,9 +409,13 @@ function resetAllCards() {
     const resultEl = document.querySelector(`[data-result="${type}"]`);
     const actionsEl = document.querySelector(`[data-actions="${type}"]`);
     const errorEl = document.querySelector(`[data-error="${type}"]`);
+    const hintEl = document.querySelector(`[data-hint="${type}"]`);
+    const fullEl = document.querySelector(`[data-full="${type}"]`);
     if (resultEl) { resultEl.style.display = 'none'; resultEl.innerHTML = ''; }
     if (actionsEl) { actionsEl.style.display = 'none'; actionsEl.innerHTML = ''; }
     if (errorEl) { errorEl.style.display = 'none'; }
+    if (hintEl) { hintEl.style.display = 'none'; }
+    if (fullEl) { fullEl.innerHTML = ''; }
     delete results[type];
   });
   updateTotal();
