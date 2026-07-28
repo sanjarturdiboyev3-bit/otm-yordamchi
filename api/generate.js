@@ -108,12 +108,21 @@ export default async function handler(req, res) {
   }
   const safeDaraja = ALLOWED_DARAJA.includes(daraja) ? daraja : 'OTM (bakalavriat)';
 
-  // 3) IP bo'yicha cheklov — bitta manbadan haddan tashqari ko'p so'rovni to'sadi
+  // Sinov/rivojlantirish uchun: ADMIN_BYPASS_IPS ro'yxatidagi IP manzillar
+  // rate-limit va bepul-urinish cheklovidan mustasno. Bu FAQAT serverda
+  // saqlanadi (Vercel environment variable) — brauzer kodida hech qachon
+  // ko'rinmaydi, shuning uchun uni topib, to'lovni chetlab o'tib bo'lmaydi.
   const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
-  const allowed = await checkRateLimit(ip);
-  if (!allowed) {
-    res.status(429).json({ error: "Juda ko'p so'rov yuborildi. Iltimos, birozdan keyin qayta urinib ko'ring." });
-    return;
+  const adminIps = String(process.env.ADMIN_BYPASS_IPS || '').split(',').map(s => s.trim()).filter(Boolean);
+  const isAdmin = adminIps.includes(ip);
+
+  // 3) IP bo'yicha cheklov — bitta manbadan haddan tashqari ko'p so'rovni to'sadi
+  if (!isAdmin) {
+    const allowed = await checkRateLimit(ip);
+    if (!allowed) {
+      res.status(429).json({ error: "Juda ko'p so'rov yuborildi. Iltimos, birozdan keyin qayta urinib ko'ring." });
+      return;
+    }
   }
 
   const base = `Fan: ${fan}. Mavzu: ${mavzu}. Ta'lim darajasi: ${safeDaraja}.`;
@@ -170,7 +179,7 @@ export default async function handler(req, res) {
     }
 
     const { summary, full } = splitSummaryAndFull(text);
-    const isFree = await registerUseAndCheckFree(ip);
+    const isFree = isAdmin ? true : await registerUseAndCheckFree(ip);
     res.status(200).json({ summary, full, isFree });
   } catch (e) {
     res.status(500).json({ error: 'Server xatosi' });
