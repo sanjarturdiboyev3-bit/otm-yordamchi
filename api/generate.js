@@ -1,12 +1,33 @@
 // Promptlar endi FAQAT serverda tuziladi — mijoz (brauzer) tomonidan
 // erkin matn (prompt) yuborib bo'lmaydi. Bu API'ni "istalgan narsani yoz"
 // vositasiga aylantirib qo'yishning oldini oladi.
+//
+// Har bir shablon javobni ikki qismga bo'lishni so'raydi:
+// "## QISQACHA" — bosh oynada ko'rsatiladigan qisqa, kuchli xulosa
+// "## TO'LIQ" — faqat PDF/Word yuklab olishda beriladigan to'liq, ilmiy asoslangan matn
 const PROMPT_TEMPLATES = {
-  material: (base) => `${base}\n\nSiz tajribali pedagog va fan mutaxassisisiz. Shu mavzu bo'yicha qisqa, mazmunli o'quv materiali yozing: (1) mavzuga kirish va ahamiyati, (2) asosiy ta'rif va tushunchalar, (3) kamida bitta batafsil ishlangan misol, (4) mavzuning amaliy qo'llanilishi. O'zbek tilida, aniq sarlavhalar bilan tuzing.`,
-  slayd: (base) => `${base}\n\nShu mavzu bo'yicha taqdimot uchun 9-10 ta slayd rejasini tuzing. Har bir slayd uchun "Slayd N: Sarlavha" va 3-4 ta qisqa bullet fikr yozing. O'zbek tilida yozing.`,
-  mashq: (base) => `${base}\n\nShu mavzu bo'yicha 8-10 ta amaliy mashq tuzing: birinchi 3-4 tasi TO'LIQ YECHIMI bilan, qolganlari mustaqil bajarish uchun (faqat javob, yechimsiz). Aniq raqamlab, o'zbek tilida yozing.`,
-  test: (base) => `${base}\n\nShu mavzu bo'yicha 14-16 ta ko'p tanlovli test savoli tuzing (A,B,C,D variantlari bilan). Oxirida "Javoblar kaliti:" deb barcha to'g'ri javoblarni bering. O'zbek tilida, ixcham yozing.`,
+  material: (base) => `${base}\n\nSiz tajribali pedagog va fan mutaxassisisiz. Javobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nMavzuning eng muhim mag'zini 3-4 ta jumlada, kuchli va ixcham qilib bering.\n\n## TO'LIQ\nTo'liq, keng qamrovli va ilmiy asoslangan o'quv materiali yozing: (1) mavzuga kirish va ahamiyati, (2) asosiy ta'rif va tushunchalar, (3) kamida ikkita batafsil ishlangan misol, (4) amaliy qo'llanilishi, (5) chuqurroq tushunish uchun qo'shimcha izohlar. Aniq sarlavhalar bilan, batafsil yozing. O'zbek tilida.`,
+  slayd: (base) => `${base}\n\nJavobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nTaqdimotning 3-4 ta asosiy bo'lim nomini ro'yxat qilib bering (tafsilotsiz).\n\n## TO'LIQ\n9-10 ta slayd rejasini to'liq tuzing. Har bir slayd uchun "Slayd N: Sarlavha" va 3-4 ta qisqa bullet fikr yozing. O'zbek tilida.`,
+  mashq: (base) => `${base}\n\nJavobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nMashqlar mavzusi haqida 2-3 jumlali umumiy ta'rif bering va namuna sifatida FAQAT bitta oddiy mashq (yechimisiz, faqat savol matni) ko'rsating.\n\n## TO'LIQ\n8-10 ta amaliy mashq tuzing: birinchi 3-4 tasi TO'LIQ YECHIMI bilan, qolganlari mustaqil bajarish uchun (faqat javob, yechimsiz). Aniq raqamlab yozing. O'zbek tilida.`,
+  test: (base) => `${base}\n\nJavobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nTest mavzusi haqida qisqa umumiy ma'lumot bering va namuna sifatida FAQAT bitta test savolini (A,B,C,D variantlari bilan, javobsiz) ko'rsating.\n\n## TO'LIQ\n14-16 ta ko'p tanlovli test savoli tuzing (A,B,C,D variantlari bilan). Oxirida "Javoblar kaliti:" deb barcha to'g'ri javoblarni bering. O'zbek tilida, ixcham.`,
 };
+
+// Modelning javobini "## QISQACHA" va "## TO'LIQ" belgilari bo'yicha ikkiga ajratamiz.
+function splitSummaryAndFull(text) {
+  const fullMarker = /##\s*TO'LIQ/i;
+  const summaryMarker = /##\s*QISQACHA/i;
+  const idx = text.search(fullMarker);
+  if (idx === -1) {
+    // Model belgilangan formatga rioya qilmasa ham, xizmat ishlashda davom etsin —
+    // shu holatda boshidan qisqa parcha xulosa sifatida ishlatiladi.
+    const plain = text.replace(summaryMarker, '').trim();
+    const short = plain.length > 350 ? plain.slice(0, 350).trim() + '…' : plain;
+    return { summary: short, full: plain };
+  }
+  const summary = text.slice(0, idx).replace(summaryMarker, '').trim();
+  const full = text.slice(idx).replace(fullMarker, '').trim();
+  return { summary, full };
+}
 
 const ALLOWED_DARAJA = ['Maktab', 'Kollej', "OTM (bakalavriat)"];
 
@@ -102,7 +123,7 @@ export default async function handler(req, res) {
     const requestBody = {
       // Haiku 4.5 - eng arzon va tez model, bu turdagi vazifalar uchun yetarli.
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: useSearch ? 1800 : 1200,
+      max_tokens: useSearch ? 2800 : 2200,
       messages: [{ role: 'user', content: prompt }],
     };
 
@@ -148,8 +169,9 @@ export default async function handler(req, res) {
       }
     }
 
+    const { summary, full } = splitSummaryAndFull(text);
     const isFree = await registerUseAndCheckFree(ip);
-    res.status(200).json({ text, isFree });
+    res.status(200).json({ summary, full, isFree });
   } catch (e) {
     res.status(500).json({ error: 'Server xatosi' });
   }
