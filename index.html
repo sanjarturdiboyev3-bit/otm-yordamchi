@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.18.1/dist/katex.min.css">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.18.1/dist/katex.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked@18.0.7/lib/marked.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.14.0/dist/html2pdf.bundle.min.js"></script>
 <style>
   * { box-sizing: border-box; }
   body { margin:0; background:#F5F4F0; font-family:'Manrope',sans-serif; color:#2A2A2A; }
@@ -21,6 +22,10 @@
   .form-card { padding:24px; margin-bottom:24px; }
   .form-grid { display:grid; grid-template-columns:1fr; gap:16px; }
   @media(min-width:700px){ .form-grid{ grid-template-columns:1fr 1fr 1fr; } }
+  .search-toggle { display:flex; align-items:center; gap:8px; margin-top:18px; padding-top:16px; border-top:1px solid #E5E3DC; }
+  .search-toggle input[type=checkbox] { width:16px; height:16px; accent-color:#16213E; cursor:pointer; flex-shrink:0; }
+  .search-toggle label { font-size:13px; color:#2A2A2A; font-weight:600; margin:0; cursor:pointer; }
+  .search-hint { font-size:11px; color:#6B7280; margin:4px 0 0 24px; }
   label { display:block; font-size:12px; font-weight:600; color:#6B7280; margin-bottom:4px; }
   input, select { width:100%; padding:9px 12px; border-radius:8px; border:1px solid #E5E3DC; font-family:inherit; font-size:14px; }
   .grid2 { display:grid; grid-template-columns:1fr; gap:20px; }
@@ -47,8 +52,17 @@
   .result-box th { background:#F0EFEA; }
   .result-box hr { border:none; border-top:1px solid #E5E3DC; margin:14px 0; }
   .result-box .katex-display { margin:10px 0; overflow-x:auto; overflow-y:hidden; }
+  .actions-row { display:flex; gap:8px; margin-top:10px; }
+  .btn-download { flex:1; padding:9px; border-radius:8px; border:1px solid #E5E3DC; background:#fff; color:#16213E; font-weight:600; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; }
+  .btn-download:hover { background:#F5F4F0; }
+  .btn-download:disabled { opacity:0.55; cursor:not-allowed; }
+  .pay-gate { margin-top:16px; padding:14px; border-radius:10px; background:#FBF6EA; border:1px solid #EDE0BE; text-align:center; }
+  .pay-gate-text { font-size:13px; color:#16213E; margin:0 0 10px; font-weight:600; line-height:1.4; }
+  .btn-pay { width:100%; padding:11px; border:none; border-radius:8px; font-weight:700; font-size:14px; cursor:pointer; background:#C9942A; color:#fff; display:flex; align-items:center; justify-content:center; gap:8px; }
+  .btn-pay:hover { background:#B3831F; }
   .footer-total { text-align:center; margin-top:24px; font-size:14px; color:#6B7280; }
   .spin { display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,0.4); border-top-color:#fff; border-radius:50%; animation:spin 0.7s linear infinite; }
+  .spin-dark { border-color:rgba(22,33,62,0.25); border-top-color:#16213E; }
   @keyframes spin { to { transform:rotate(360deg); } }
 </style>
 </head>
@@ -81,6 +95,11 @@
         </select>
       </div>
     </div>
+    <div class="search-toggle">
+      <input type="checkbox" id="useSearch" />
+      <label for="useSearch">🌐 Internetdan qo'shimcha/joriy ma'lumotlar bilan boyitish</label>
+    </div>
+    <p class="search-hint">Standart holatda o'chiq — tezroq va arzonroq. Joriy voqealar yoki statistik ma'lumot kerak bo'lgan mavzular uchun yoqing.</p>
   </div>
 
   <div class="grid2" id="cards"></div>
@@ -95,6 +114,12 @@ const META = {
   mashq: { title:"Amaliy mashqlar", icon:"📝", price:5000, desc:"Yechimli va mustaqil ishlash mashqlari", color:"#4A5D8A" },
   test: { title:"Test savollari", icon:"✅", price:5000, desc:"Ko'p tanlovli testlar va javoblar kaliti", color:"#8A3A4A" },
 };
+
+// Click kabinetingizdagi haqiqiy qiymatlar bilan almashtiring (Merchant cabinet -> Sozlamalar).
+// Bular maxfiy emas — checkout havolasida ochiq ko'rinadi. SECRET_KEY esa bu yerda EMAS,
+// faqat Vercel Environment Variables ichida (server tomonida) saqlanadi.
+const CLICK_SERVICE_ID = "SIZNING_SERVICE_ID";
+const CLICK_MERCHANT_ID = "SIZNING_MERCHANT_ID";
 
 const results = {};
 
@@ -139,6 +164,137 @@ function renderContent(el, text) {
   el.innerHTML = html;
 }
 
+function downloadAsPDF(resultEl, filename) {
+  // result-box balandligi cheklangan va scroll qilinadigan qilib qo'yilgan,
+  // shuning uchun to'liq tarkibni PDF qilish uchun cheklovsiz nusxasini yasab,
+  // ekrandan tashqarida vaqtincha joylashtiramiz.
+  const clone = resultEl.cloneNode(true);
+  clone.style.maxHeight = 'none';
+  clone.style.overflow = 'visible';
+  clone.style.width = resultEl.offsetWidth + 'px';
+  clone.style.position = 'fixed';
+  clone.style.left = '-9999px';
+  clone.style.top = '0';
+  document.body.appendChild(clone);
+
+  return html2pdf().from(clone).set({
+    margin: 10,
+    filename: filename + '.pdf',
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+  }).save().finally(() => {
+    document.body.removeChild(clone);
+  });
+}
+
+function downloadAsWord(resultEl, filename) {
+  const pre = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>" + filename + "</title></head><body style=\"font-family:Calibri,Arial,sans-serif;\">";
+  const post = '</body></html>';
+  const html = pre + resultEl.innerHTML + post;
+  const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename + '.doc';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+async function handlePdfClick(type, btn) {
+  const resultEl = document.querySelector(`[data-result="${type}"]`);
+  const name = buildFilename(type);
+  const old = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin spin-dark"></span> Tayyorlanmoqda...';
+  try {
+    await downloadAsPDF(resultEl, name);
+  } catch (e) {
+    alert("PDF yaratishda xatolik yuz berdi. Qayta urinib ko'ring.");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = old;
+  }
+}
+
+function handleWordClick(type) {
+  const resultEl = document.querySelector(`[data-result="${type}"]`);
+  downloadAsWord(resultEl, buildFilename(type));
+}
+
+function showDownloadButtons(type) {
+  const box = document.querySelector(`[data-actions="${type}"]`);
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div class="actions-row">
+      <button class="btn-download" data-pdf="${type}">📄 PDF</button>
+      <button class="btn-download" data-word="${type}">📝 Word</button>
+    </div>
+  `;
+  box.querySelector('[data-pdf]').addEventListener('click', (e) => handlePdfClick(type, e.currentTarget));
+  box.querySelector('[data-word]').addEventListener('click', () => handleWordClick(type));
+}
+
+function showPayGate(type) {
+  const box = document.querySelector(`[data-actions="${type}"]`);
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div class="pay-gate">
+      <p class="pay-gate-text">✅ Materialingiz tayyor!<br>Yuklab olish uchun to'lov qiling — 5 000 so'm</p>
+      <button class="btn-pay" data-pay="${type}">💳 Click orqali to'lash</button>
+    </div>
+  `;
+  box.querySelector('[data-pay]').addEventListener('click', () => payWithClick(type));
+}
+
+function showChecking(type) {
+  const box = document.querySelector(`[data-actions="${type}"]`);
+  box.style.display = 'block';
+  box.innerHTML = `<div class="pay-gate"><p class="pay-gate-text"><span class="spin spin-dark"></span> To'lov tekshirilmoqda...</p></div>`;
+}
+
+function payWithClick(type) {
+  const orderId = `otm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  localStorage.setItem('pending_order', JSON.stringify({ orderId, type }));
+  const returnUrl = `${window.location.origin}${window.location.pathname}?paid_order=${orderId}&paid_type=${type}`;
+  const params = new URLSearchParams({
+    service_id: CLICK_SERVICE_ID,
+    merchant_id: CLICK_MERCHANT_ID,
+    amount: '5000',
+    transaction_param: orderId,
+    return_url: returnUrl,
+  });
+  window.location.href = `https://my.click.uz/services/pay?${params.toString()}`;
+}
+
+async function checkPendingPayment() {
+  const params = new URLSearchParams(window.location.search);
+  const orderId = params.get('paid_order');
+  const type = params.get('paid_type');
+  if (!orderId || !type || !META[type]) return;
+
+  window.history.replaceState({}, '', window.location.pathname);
+  showChecking(type);
+
+  for (let i = 0; i < 12; i++) {
+    await new Promise(r => setTimeout(r, 2000));
+    try {
+      const res = await fetch(`/api/check-payment?order=${encodeURIComponent(orderId)}`);
+      const data = await res.json();
+      if (data.paid) {
+        results[type] = true;
+        showDownloadButtons(type);
+        updateTotal();
+        return;
+      }
+    } catch (e) { /* keyingi urinishda davom etamiz */ }
+  }
+
+  const box = document.querySelector(`[data-actions="${type}"]`);
+  box.innerHTML = `<div class="pay-gate"><p class="pay-gate-text" style="color:#B23A3A;">To'lov hali tasdiqlanmadi.<br>Agar to'lov qilgan bo'lsangiz, sahifani birozdan keyin yangilang.</p></div>`;
+}
+
 function render() {
   const cardsEl = document.getElementById('cards');
   cardsEl.innerHTML = '';
@@ -154,12 +310,12 @@ function render() {
             <p class="item-desc">${meta.desc}</p>
           </div>
         </div>
-        <div class="price-badge">${meta.price.toLocaleString()} so'm</div>
       </div>
       <div class="item-body">
         <button class="generate" data-type="${type}">✨ Yaratish</button>
         <div class="error-text" data-error="${type}" style="display:none;"></div>
         <div class="result-box" data-result="${type}" style="display:none;"></div>
+        <div class="actions-row" data-actions="${type}" style="display:none;"></div>
       </div>
     `;
     cardsEl.appendChild(card);
@@ -168,6 +324,12 @@ function render() {
   document.querySelectorAll('button.generate').forEach(btn => {
     btn.addEventListener('click', () => generate(btn.dataset.type));
   });
+}
+
+function buildFilename(type) {
+  const fan = (document.getElementById('fan').value || 'Fan').trim();
+  const mavzu = (document.getElementById('mavzu').value || META[type].title).trim();
+  return `${fan}_${mavzu}_${META[type].title}`.replace(/\s+/g, '_');
 }
 
 async function generate(type) {
@@ -183,23 +345,26 @@ async function generate(type) {
     errorEl.style.display = 'block';
     return;
   }
+  const useSearch = document.getElementById('useSearch').checked;
+
   errorEl.style.display = 'none';
   btn.disabled = true;
-  btn.innerHTML = '<span class="spin"></span> Yaratilmoqda...';
+  btn.innerHTML = useSearch
+    ? '<span class="spin"></span> Internetdan izlanmoqda...'
+    : '<span class="spin"></span> Yaratilmoqda...';
 
   try {
     const prompt = buildPrompt(type, fan, mavzu, daraja);
     const res = await fetch('/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ prompt, useSearch }),
     });
     if (!res.ok) throw new Error('Server xatosi');
     const data = await res.json();
-    results[type] = true;
     renderContent(resultEl, data.text);
     resultEl.style.display = 'block';
-    updateTotal();
+    showPayGate(type);
   } catch (e) {
     errorEl.textContent = "Xatolik yuz berdi. Qayta urinib ko'ring.";
     errorEl.style.display = 'block';
@@ -214,11 +379,12 @@ function updateTotal() {
   const totalEl = document.getElementById('total');
   if (count > 0) {
     totalEl.style.display = 'block';
-    totalEl.innerHTML = `Hozircha yaratilgan: ${count} ta material — jami qiymati: <strong style="color:#16213E;">${(count*5000).toLocaleString()} so'm</strong>`;
+    totalEl.innerHTML = `To'langan materiallar: ${count} ta — jami: <strong style="color:#16213E;">${(count*5000).toLocaleString()} so'm</strong>`;
   }
 }
 
 render();
+checkPendingPayment();
 </script>
 </body>
 </html>
