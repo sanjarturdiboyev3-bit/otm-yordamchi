@@ -37,6 +37,32 @@ async function checkRateLimit(ip) {
   }
 }
 
+// Bepul urinishlar hisobi: har bir IP birinchi FREE_QUOTA marta materialni
+// to'lovsiz yaratishi va yuklab olishi mumkin, undan keyingilari uchun
+// to'lov darvozasi (Click) ko'rsatiladi.
+const FREE_QUOTA = 2;
+const FREE_QUOTA_TTL_SECONDS = 31536000; // 1 yil — hisoblagich abadiy saqlanib qolmasin
+
+async function registerUseAndCheckFree(ip) {
+  if (!UPSTASH_URL || !UPSTASH_TOKEN) return true; // Redis yo'q bo'lsa, hammasi bepul hisoblanadi
+  try {
+    const key = `freeuses:${ip}`;
+    const incrRes = await fetch(`${UPSTASH_URL}/incr/${encodeURIComponent(key)}`, {
+      headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
+    });
+    const incrData = await incrRes.json();
+    const count = Number(incrData.result);
+    if (count === 1) {
+      await fetch(`${UPSTASH_URL}/expire/${encodeURIComponent(key)}/${FREE_QUOTA_TTL_SECONDS}`, {
+        headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
+      });
+    }
+    return count <= FREE_QUOTA;
+  } catch (e) {
+    return true;
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
@@ -122,7 +148,8 @@ export default async function handler(req, res) {
       }
     }
 
-    res.status(200).json({ text });
+    const isFree = await registerUseAndCheckFree(ip);
+    res.status(200).json({ text, isFree });
   } catch (e) {
     res.status(500).json({ error: 'Server xatosi' });
   }
