@@ -1,433 +1,212 @@
-<!DOCTYPE html>
-<html lang="uz">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>O'qituvchi Yordamchisi</title>
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.18.1/dist/katex.min.css">
-<script src="https://cdn.jsdelivr.net/npm/katex@0.18.1/dist/katex.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/marked@18.0.7/lib/marked.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.14.0/dist/html2pdf.bundle.min.js"></script>
-<style>
-  * { box-sizing: border-box; }
-  body { margin:0; background:#F5F4F0; font-family:'Manrope',sans-serif; color:#2A2A2A; }
-  .serif { font-family:'Source Serif 4', Georgia, serif; }
-  .wrap { max-width:1000px; margin:0 auto; padding:24px; }
-  header { display:flex; align-items:center; gap:12px; margin-bottom:24px; }
-  .logo { width:44px; height:44px; border-radius:50%; background:#16213E; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:20px; }
-  h1 { font-size:24px; font-weight:700; color:#16213E; margin:0; font-family:'Source Serif 4',Georgia,serif; }
-  .subtitle { font-size:14px; color:#6B7280; margin:2px 0 0; }
-  .card { background:#fff; border:1px solid #E5E3DC; border-radius:16px; box-shadow:0 1px 2px rgba(0,0,0,0.03); }
-  .form-card { padding:24px; margin-bottom:24px; }
-  .form-grid { display:grid; grid-template-columns:1fr; gap:16px; }
-  @media(min-width:700px){ .form-grid{ grid-template-columns:1fr 1fr 1fr; } }
-  .search-toggle { display:flex; align-items:center; gap:8px; margin-top:18px; padding-top:16px; border-top:1px solid #E5E3DC; }
-  .search-toggle input[type=checkbox] { width:16px; height:16px; accent-color:#16213E; cursor:pointer; flex-shrink:0; }
-  .search-toggle label { font-size:13px; color:#2A2A2A; font-weight:600; margin:0; cursor:pointer; }
-  .search-hint { font-size:11px; color:#6B7280; margin:4px 0 0 24px; }
-  label { display:block; font-size:12px; font-weight:600; color:#6B7280; margin-bottom:4px; }
-  input, select { width:100%; padding:9px 12px; border-radius:8px; border:1px solid #E5E3DC; font-family:inherit; font-size:14px; }
-  .grid2 { display:grid; grid-template-columns:1fr; gap:20px; }
-  @media(min-width:700px){ .grid2{ grid-template-columns:1fr 1fr; } }
-  .item-card-head { padding:20px; display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
-  .item-left { display:flex; gap:12px; align-items:center; }
-  .icon-box { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:18px; }
-  .item-title { font-weight:700; font-size:15px; color:#16213E; margin:0; }
-  .item-desc { font-size:12px; color:#6B7280; margin:2px 0 0; }
-  .price-badge { background:#C9942A; color:#fff; font-size:12px; font-weight:700; padding:4px 12px; border-radius:999px; white-space:nowrap; }
-  .item-body { padding:0 20px 20px; }
-  button.generate { width:100%; padding:11px; border:none; border-radius:8px; font-weight:600; font-size:14px; cursor:pointer; background:#16213E; color:#fff; display:flex; align-items:center; justify-content:center; gap:8px; }
-  button.generate:disabled { background:#E5E3DC; color:#6B7280; cursor:not-allowed; }
-  .error-text { color:#B23A3A; font-size:12px; margin-top:8px; }
-  .result-box { margin-top:16px; padding:14px 16px; border-radius:10px; background:#F9F8F5; border:1px solid #EDEBE3; font-size:13px; line-height:1.65; max-height:260px; overflow-y:auto; overflow-x:hidden; }
-  .summary-hint { font-size:11px; color:#6B7280; margin:6px 0 0; font-style:italic; }
-  .full-content { max-height:0; overflow:hidden; }
-  .result-box h1, .result-box h2, .result-box h3, .full-content h1, .full-content h2, .full-content h3 { font-family:'Source Serif 4',Georgia,serif; color:#16213E; font-size:15px; margin:14px 0 6px; }
-  .result-box h1:first-child, .result-box h2:first-child, .result-box h3:first-child, .result-box p:first-child, .full-content h1:first-child, .full-content h2:first-child, .full-content h3:first-child, .full-content p:first-child { margin-top:0; }
-  .result-box p, .full-content p { margin:8px 0; }
-  .result-box ul, .result-box ol, .full-content ul, .full-content ol { margin:8px 0; padding-left:20px; }
-  .result-box li, .full-content li { margin:4px 0; }
-  .result-box strong, .full-content strong { color:#16213E; }
-  .result-box table, .full-content table { border-collapse:collapse; width:100%; margin:10px 0; font-size:12px; }
-  .result-box th, .result-box td, .full-content th, .full-content td { border:1px solid #E5E3DC; padding:6px 8px; text-align:left; }
-  .result-box th, .full-content th { background:#F0EFEA; }
-  .result-box hr, .full-content hr { border:none; border-top:1px solid #E5E3DC; margin:14px 0; }
-  .result-box .katex-display, .full-content .katex-display { margin:10px 0; overflow-x:auto; overflow-y:hidden; }
-  .actions-row { display:flex; gap:8px; margin-top:10px; }
-  .btn-download { flex:1; padding:9px; border-radius:8px; border:1px solid #E5E3DC; background:#fff; color:#16213E; font-weight:600; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; }
-  .btn-download:hover { background:#F5F4F0; }
-  .btn-download:disabled { opacity:0.55; cursor:not-allowed; }
-  .pay-gate { margin-top:16px; padding:14px; border-radius:10px; background:#FBF6EA; border:1px solid #EDE0BE; text-align:center; }
-  .pay-gate-text { font-size:13px; color:#16213E; margin:0 0 10px; font-weight:600; line-height:1.4; }
-  .btn-pay { width:100%; padding:11px; border:none; border-radius:8px; font-weight:700; font-size:14px; cursor:pointer; background:#C9942A; color:#fff; display:flex; align-items:center; justify-content:center; gap:8px; }
-  .btn-pay:hover { background:#B3831F; }
-  .footer-total { text-align:center; margin-top:24px; font-size:14px; color:#6B7280; }
-  .spin { display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,0.4); border-top-color:#fff; border-radius:50%; animation:spin 0.7s linear infinite; }
-  .spin-dark { border-color:rgba(22,33,62,0.25); border-top-color:#16213E; }
-  @keyframes spin { to { transform:rotate(360deg); } }
-</style>
-</head>
-<body>
-<div class="wrap">
-  <header>
-    <div class="logo">🎓</div>
-    <div>
-      <h1>O'qituvchi Yordamchisi</h1>
-      <p class="subtitle">Bitta mavzu — to'rtta tayyor dars materiali, sun'iy intellekt yordamida</p>
-    </div>
-  </header>
-
-  <div class="card form-card">
-    <div class="form-grid">
-      <div>
-        <label>FAN</label>
-        <input id="fan" value="Matematika" />
-      </div>
-      <div>
-        <label>MAVZU</label>
-        <input id="mavzu" placeholder="masalan: Matritsalar va amallar" />
-      </div>
-      <div>
-        <label>DARAJA</label>
-        <select id="daraja">
-          <option>Maktab</option>
-          <option>Kollej</option>
-          <option selected>OTM (bakalavriat)</option>
-        </select>
-      </div>
-    </div>
-    <div class="search-toggle">
-      <input type="checkbox" id="useSearch" />
-      <label for="useSearch">🌐 Internetdan qo'shimcha/joriy ma'lumotlar bilan boyitish</label>
-    </div>
-    <p class="search-hint">Standart holatda o'chiq — tezroq va arzonroq. Joriy voqealar yoki statistik ma'lumot kerak bo'lgan mavzular uchun yoqing.</p>
-  </div>
-
-  <div class="grid2" id="cards"></div>
-
-  <div class="footer-total" id="total" style="display:none;"></div>
-</div>
-
-<script>
-const META = {
-  material: { title:"O'quv materiali", icon:"📄", price:4990, desc:"Mavzu bo'yicha tushuntirish, ta'rif, misol", color:"#2F5D50" },
-  slayd: { title:"Taqdimot slaydlari", icon:"📊", price:4990, desc:"Dars taqdimoti uchun slaydlar rejasi", color:"#8A5A2E" },
-  mashq: { title:"Amaliy mashqlar", icon:"📝", price:4990, desc:"Yechimli va mustaqil ishlash mashqlari", color:"#4A5D8A" },
-  test: { title:"Test savollari", icon:"✅", price:4990, desc:"Ko'p tanlovli testlar va javoblar kaliti", color:"#8A3A4A" },
+// Promptlar endi FAQAT serverda tuziladi — mijoz (brauzer) tomonidan
+// erkin matn (prompt) yuborib bo'lmaydi. Bu API'ni "istalgan narsani yoz"
+// vositasiga aylantirib qo'yishning oldini oladi.
+//
+// Har bir shablon javobni ikki qismga bo'lishni so'raydi:
+// "## QISQACHA" — bosh oynada ko'rsatiladigan qisqa, kuchli xulosa
+// "## TO'LIQ" — faqat PDF/Word yuklab olishda beriladigan to'liq, ilmiy asoslangan matn
+const PROMPT_TEMPLATES = {
+  material: (base) => `${base}\n\nSiz tajribali pedagog va fan mutaxassisisiz. Javobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nMavzuning eng muhim mag'zini 3-4 ta jumlada, kuchli va ixcham qilib bering.\n\n## TO'LIQ\nTo'liq, keng qamrovli va ilmiy asoslangan o'quv materiali yozing: (1) mavzuga kirish va ahamiyati, (2) asosiy ta'rif va tushunchalar, (3) kamida ikkita batafsil ishlangan misol, (4) amaliy qo'llanilishi, (5) chuqurroq tushunish uchun qo'shimcha izohlar. Aniq sarlavhalar bilan, batafsil yozing. O'zbek tilida.`,
+  slayd: (base) => `${base}\n\nJavobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nTaqdimotning 3-4 ta asosiy bo'lim nomini ro'yxat qilib bering (tafsilotsiz).\n\n## TO'LIQ\nShu yerga FAQAT JSON massiv yozing, boshqa hech qanday matn, izoh yoki markdown belgisi qo'shmang. Kamida 10 ta obyekt bo'lsin. Format aniq shunday bo'lsin:\n[{"title":"Slayd sarlavhasi","bullets":["fikr 1","fikr 2","fikr 3"]}]\nHar bir bullet qisqa (10-15 so'z) va mazmunli bo'lsin. O'zbek tilida.`,
+  mashq: (base) => `${base}\n\nJavobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nMashqlar mavzusi haqida 2-3 jumlali umumiy ta'rif bering va namuna sifatida FAQAT bitta oddiy mashq (yechimisiz, faqat savol matni) ko'rsating.\n\n## TO'LIQ\n8-10 ta amaliy mashq tuzing: birinchi 3-4 tasi TO'LIQ YECHIMI bilan, qolganlari mustaqil bajarish uchun (faqat javob, yechimsiz). Aniq raqamlab yozing. O'zbek tilida.`,
+  test: (base) => `${base}\n\nJavobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nTest mavzusi haqida qisqa umumiy ma'lumot bering va namuna sifatida FAQAT bitta test savolini (A,B,C,D variantlari bilan, javobsiz) ko'rsating.\n\n## TO'LIQ\n14-16 ta ko'p tanlovli test savoli tuzing (A,B,C,D variantlari bilan). Oxirida "Javoblar kaliti:" deb barcha to'g'ri javoblarni bering. O'zbek tilida, ixcham.`,
 };
 
-// Click kabinetingizdagi haqiqiy qiymatlar bilan almashtiring (Merchant cabinet -> Sozlamalar).
-// Bular maxfiy emas — checkout havolasida ochiq ko'rinadi. SECRET_KEY esa bu yerda EMAS,
-// faqat Vercel Environment Variables ichida (server tomonida) saqlanadi.
-const CLICK_SERVICE_ID = "SIZNING_SERVICE_ID";
-const CLICK_MERCHANT_ID = "SIZNING_MERCHANT_ID";
+// Modelning javobini "## QISQACHA" va "## TO'LIQ" belgilari bo'yicha ikkiga ajratamiz.
+function splitSummaryAndFull(text) {
+  const fullMarker = /##\s*TO'LIQ/i;
+  const summaryMarker = /##\s*QISQACHA/i;
+  const idx = text.search(fullMarker);
+  if (idx === -1) {
+    // Model belgilangan formatga rioya qilmasa ham, xizmat ishlashda davom etsin —
+    // shu holatda boshidan qisqa parcha xulosa sifatida ishlatiladi.
+    const plain = text.replace(summaryMarker, '').trim();
+    const short = plain.length > 350 ? plain.slice(0, 350).trim() + '…' : plain;
+    return { summary: short, full: plain };
+  }
+  const summary = text.slice(0, idx).replace(summaryMarker, '').trim();
+  const full = text.slice(idx).replace(fullMarker, '').trim();
+  return { summary, full };
+}
 
-const results = {};
+const ALLOWED_DARAJA = ['Maktab', 'Kollej', "OTM (bakalavriat)"];
 
-// Diqqat: prompt matni endi mijoz tomonida QURILMAYDI — buni serverga
-// (api/generate.js) ko'chirdik, chunki avvalgi usulda istalgan kishi
-// /api/generate'ga to'g'ridan-to'g'ri o'zi xohlagan promptni yuborishi mumkin edi.
+const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
+const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+const RATE_LIMIT_MAX = 20; // bitta IP uchun 1 soatda maksimal so'rov soni
+const RATE_LIMIT_WINDOW_SECONDS = 3600;
 
-function renderContent(el, text) {
-  // Avval $$...$$ va $...$ ichidagi LaTeX formulalarni matndan ajratib olamiz,
-  // bo'lmasa markdown parser "a_{11}" kabi ostki chiziqlarni kursiv belgisi
-  // deb tushunib, formulani buzib qo'yadi.
-  const mathStore = [];
-  const protectedText = String(text)
-    .replace(/\$\$([\s\S]+?)\$\$/g, (m, expr) => {
-      const i = mathStore.push({ expr, display: true }) - 1;
-      return `@@MATH${i}@@`;
-    })
-    .replace(/\$([^$\n]+?)\$/g, (m, expr) => {
-      const i = mathStore.push({ expr, display: false }) - 1;
-      return `@@MATH${i}@@`;
+async function checkRateLimit(ip) {
+  // Agar Redis hali sozlanmagan bo'lsa, xizmatni to'xtatib qo'ymaymiz —
+  // lekin bu holatda cheklov ham ishlamaydi (Upstash qadamini bajarish shart).
+  if (!UPSTASH_URL || !UPSTASH_TOKEN) return true;
+  try {
+    const key = `ratelimit:generate:${ip}`;
+    const incrRes = await fetch(`${UPSTASH_URL}/incr/${encodeURIComponent(key)}`, {
+      headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
     });
-
-  let html = marked.parse(protectedText);
-
-  html = html.replace(/@@MATH(\d+)@@/g, (m, i) => {
-    const item = mathStore[Number(i)];
-    if (!item) return m;
-    try {
-      return katex.renderToString(item.expr, { displayMode: item.display, throwOnError: false });
-    } catch (e) {
-      return item.expr;
+    const incrData = await incrRes.json();
+    const count = Number(incrData.result);
+    if (count === 1) {
+      await fetch(`${UPSTASH_URL}/expire/${encodeURIComponent(key)}/${RATE_LIMIT_WINDOW_SECONDS}`, {
+        headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
+      });
     }
-  });
-
-  el.innerHTML = html;
-}
-
-async function downloadAsPDF(el, filename) {
-  // Avvalgi usul (ekrandan -9999px surilgan nusxa) html2canvas'da ko'pincha
-  // BO'SH sahifa hosil qilardi. Ishonchli usul: elementni o'z joyida vaqtincha
-  // to'liq balandlikka kengaytirib suratga olamiz, so'ng qaytaramiz.
-  const prevMaxHeight = el.style.maxHeight;
-  const prevOverflow = el.style.overflow;
-  el.style.maxHeight = 'none';
-  el.style.overflow = 'visible';
-
-  try {
-    await html2pdf().from(el).set({
-      margin: 10,
-      filename: filename + '.pdf',
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    }).save();
-  } finally {
-    el.style.maxHeight = prevMaxHeight;
-    el.style.overflow = prevOverflow;
-  }
-}
-
-function downloadAsWord(el, filename) {
-  const pre = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>" + filename + "</title></head><body style=\"font-family:Calibri,Arial,sans-serif;\">";
-  const post = '</body></html>';
-  const html = pre + el.innerHTML + post;
-  const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename + '.doc';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-async function handlePdfClick(type, btn) {
-  const fullEl = document.querySelector(`[data-full="${type}"]`);
-  const name = buildFilename(type);
-  const old = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spin spin-dark"></span> Tayyorlanmoqda...';
-  try {
-    await downloadAsPDF(fullEl, name);
+    return count <= RATE_LIMIT_MAX;
   } catch (e) {
-    alert("PDF yaratishda xatolik yuz berdi. Qayta urinib ko'ring.");
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = old;
+    return true; // Redis vaqtincha ishlamasa, foydalanuvchini jazolamaymiz
   }
 }
 
-function handleWordClick(type) {
-  const fullEl = document.querySelector(`[data-full="${type}"]`);
-  downloadAsWord(fullEl, buildFilename(type));
-}
+// Bepul urinishlar hisobi: har bir IP birinchi FREE_QUOTA marta materialni
+// to'lovsiz yaratishi va yuklab olishi mumkin, undan keyingilari uchun
+// to'lov darvozasi (Click) ko'rsatiladi.
+const FREE_QUOTA = 2;
+const FREE_QUOTA_TTL_SECONDS = 31536000; // 1 yil — hisoblagich abadiy saqlanib qolmasin
 
-function showDownloadButtons(type) {
-  const box = document.querySelector(`[data-actions="${type}"]`);
-  box.style.display = 'block';
-  box.innerHTML = `
-    <div class="actions-row">
-      <button class="btn-download" data-pdf="${type}">📄 PDF</button>
-      <button class="btn-download" data-word="${type}">📝 Word</button>
-    </div>
-  `;
-  box.querySelector('[data-pdf]').addEventListener('click', (e) => handlePdfClick(type, e.currentTarget));
-  box.querySelector('[data-word]').addEventListener('click', () => handleWordClick(type));
-}
-
-function showPayGate(type) {
-  const box = document.querySelector(`[data-actions="${type}"]`);
-  box.style.display = 'block';
-  box.innerHTML = `
-    <div class="pay-gate">
-      <p class="pay-gate-text">✅ Materialingiz tayyor!<br>Yuklab olish uchun to'lov qiling — 4 990 so'm</p>
-      <button class="btn-pay" data-pay="${type}">💳 Click orqali to'lash</button>
-    </div>
-  `;
-  box.querySelector('[data-pay]').addEventListener('click', () => payWithClick(type));
-}
-
-function showChecking(type) {
-  const box = document.querySelector(`[data-actions="${type}"]`);
-  box.style.display = 'block';
-  box.innerHTML = `<div class="pay-gate"><p class="pay-gate-text"><span class="spin spin-dark"></span> To'lov tekshirilmoqda...</p></div>`;
-}
-
-function payWithClick(type) {
-  if (CLICK_SERVICE_ID === 'SIZNING_SERVICE_ID' || CLICK_MERCHANT_ID === 'SIZNING_MERCHANT_ID') {
-    // Click hisobi hali ulanmagan — buzilgan sahifaga emas, tushunarli xabarga yo'naltiramiz.
-    const box = document.querySelector(`[data-actions="${type}"]`);
-    box.innerHTML = `<div class="pay-gate"><p class="pay-gate-text" style="color:#B23A3A;">To'lov tizimi hali sozlanmoqda. Iltimos, birozdan keyin qayta urinib ko'ring.</p></div>`;
-    return;
-  }
-  const orderId = `otm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  localStorage.setItem('pending_order', JSON.stringify({ orderId, type }));
-  const returnUrl = `${window.location.origin}${window.location.pathname}?paid_order=${orderId}&paid_type=${type}`;
-  const params = new URLSearchParams({
-    service_id: CLICK_SERVICE_ID,
-    merchant_id: CLICK_MERCHANT_ID,
-    amount: '4990',
-    transaction_param: orderId,
-    return_url: returnUrl,
-  });
-  window.location.href = `https://my.click.uz/services/pay?${params.toString()}`;
-}
-
-async function checkPendingPayment() {
-  const params = new URLSearchParams(window.location.search);
-  const orderId = params.get('paid_order');
-  const type = params.get('paid_type');
-  if (!orderId || !type || !META[type]) return;
-
-  window.history.replaceState({}, '', window.location.pathname);
-  showChecking(type);
-
-  for (let i = 0; i < 12; i++) {
-    await new Promise(r => setTimeout(r, 2000));
-    try {
-      const res = await fetch(`/api/check-payment?order=${encodeURIComponent(orderId)}`);
-      const data = await res.json();
-      if (data.paid) {
-        results[type] = true;
-        showDownloadButtons(type);
-        updateTotal();
-        return;
-      }
-    } catch (e) { /* keyingi urinishda davom etamiz */ }
-  }
-
-  const box = document.querySelector(`[data-actions="${type}"]`);
-  box.innerHTML = `<div class="pay-gate"><p class="pay-gate-text" style="color:#B23A3A;">To'lov hali tasdiqlanmadi.<br>Agar to'lov qilgan bo'lsangiz, sahifani birozdan keyin yangilang.</p></div>`;
-}
-
-function render() {
-  const cardsEl = document.getElementById('cards');
-  cardsEl.innerHTML = '';
-  Object.entries(META).forEach(([type, meta]) => {
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.innerHTML = `
-      <div class="item-card-head">
-        <div class="item-left">
-          <div class="icon-box" style="background:${meta.color}1A;">${meta.icon}</div>
-          <div>
-            <p class="item-title">${meta.title}</p>
-            <p class="item-desc">${meta.desc}</p>
-          </div>
-        </div>
-      </div>
-      <div class="item-body">
-        <button class="generate" data-type="${type}">✨ Yaratish</button>
-        <div class="error-text" data-error="${type}" style="display:none;"></div>
-        <div class="result-box" data-result="${type}" style="display:none;"></div>
-        <p class="summary-hint" data-hint="${type}" style="display:none;">To'liq, batafsil va ilmiy asoslangan versiya PDF/Word formatida yuklab olinadi.</p>
-        <div class="full-content" data-full="${type}"></div>
-        <div class="actions-row" data-actions="${type}" style="display:none;"></div>
-      </div>
-    `;
-    cardsEl.appendChild(card);
-  });
-
-  document.querySelectorAll('button.generate').forEach(btn => {
-    btn.addEventListener('click', () => generate(btn.dataset.type));
-  });
-}
-
-function buildFilename(type) {
-  const fan = (document.getElementById('fan').value || 'Fan').trim();
-  const mavzu = (document.getElementById('mavzu').value || META[type].title).trim();
-  return `${fan}_${mavzu}_${META[type].title}`.replace(/\s+/g, '_');
-}
-
-async function generate(type) {
-  const fan = document.getElementById('fan').value || 'Fan';
-  const mavzu = document.getElementById('mavzu').value.trim();
-  const daraja = document.getElementById('daraja').value;
-  const errorEl = document.querySelector(`[data-error="${type}"]`);
-  const resultEl = document.querySelector(`[data-result="${type}"]`);
-  const btn = document.querySelector(`button[data-type="${type}"]`);
-
-  if (!mavzu) {
-    errorEl.textContent = "Avval mavzuni kiriting.";
-    errorEl.style.display = 'block';
-    return;
-  }
-  const useSearch = document.getElementById('useSearch').checked;
-
-  errorEl.style.display = 'none';
-  btn.disabled = true;
-  btn.innerHTML = useSearch
-    ? '<span class="spin"></span> Internetdan izlanmoqda...'
-    : '<span class="spin"></span> Yaratilmoqda...';
-
+async function registerUseAndCheckFree(ip) {
+  if (!UPSTASH_URL || !UPSTASH_TOKEN) return true; // Redis yo'q bo'lsa, hammasi bepul hisoblanadi
   try {
-    const res = await fetch('/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, fan, mavzu, daraja, useSearch }),
+    const key = `freeuses:${ip}`;
+    const incrRes = await fetch(`${UPSTASH_URL}/incr/${encodeURIComponent(key)}`, {
+      headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
     });
-    if (res.status === 429) {
-      errorEl.textContent = "Juda ko'p so'rov yubordingiz. Birozdan keyin qayta urinib ko'ring.";
-      errorEl.style.display = 'block';
+    const incrData = await incrRes.json();
+    const count = Number(incrData.result);
+    if (count === 1) {
+      await fetch(`${UPSTASH_URL}/expire/${encodeURIComponent(key)}/${FREE_QUOTA_TTL_SECONDS}`, {
+        headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
+      });
+    }
+    return count <= FREE_QUOTA;
+  } catch (e) {
+    return true;
+  }
+}
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+
+  const { type, fan, mavzu, daraja, useSearch } = req.body || {};
+
+  // 1) Faqat 4 ta belgilangan turdan biri bo'lishi mumkin
+  if (!PROMPT_TEMPLATES[type]) {
+    res.status(400).json({ error: "Noto'g'ri material turi" });
+    return;
+  }
+  // 2) Fan/mavzu bo'sh yoki g'ayritabiiy uzun bo'lmasligi kerak
+  if (!fan || !mavzu || typeof fan !== 'string' || typeof mavzu !== 'string') {
+    res.status(400).json({ error: 'Fan va mavzu kerak' });
+    return;
+  }
+  if (fan.length > 100 || mavzu.length > 200) {
+    res.status(400).json({ error: 'Matn juda uzun' });
+    return;
+  }
+  const safeDaraja = ALLOWED_DARAJA.includes(daraja) ? daraja : 'OTM (bakalavriat)';
+
+  // Sinov/rivojlantirish uchun: ADMIN_BYPASS_IPS ro'yxatidagi IP manzillar
+  // rate-limit va bepul-urinish cheklovidan mustasno. Bu FAQAT serverda
+  // saqlanadi (Vercel environment variable) — brauzer kodida hech qachon
+  // ko'rinmaydi, shuning uchun uni topib, to'lovni chetlab o'tib bo'lmaydi.
+  const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
+  const adminIps = String(process.env.ADMIN_BYPASS_IPS || '').split(',').map(s => s.trim()).filter(Boolean);
+  const isAdmin = adminIps.includes(ip);
+
+  // 3) IP bo'yicha cheklov — bitta manbadan haddan tashqari ko'p so'rovni to'sadi
+  if (!isAdmin) {
+    const allowed = await checkRateLimit(ip);
+    if (!allowed) {
+      res.status(429).json({ error: "Juda ko'p so'rov yuborildi. Iltimos, birozdan keyin qayta urinib ko'ring." });
       return;
     }
-    if (!res.ok) throw new Error('Server xatosi');
-    const data = await res.json();
-    renderContent(resultEl, data.summary);
-    resultEl.style.display = 'block';
-    const fullEl = document.querySelector(`[data-full="${type}"]`);
-    renderContent(fullEl, data.full);
-    document.querySelector(`[data-hint="${type}"]`).style.display = 'block';
-    if (data.isFree) {
-      results[type] = true;
-      showDownloadButtons(type);
-      updateTotal();
-    } else {
-      showPayGate(type);
+  }
+
+  const base = `Fan: ${fan}. Mavzu: ${mavzu}. Ta'lim darajasi: ${safeDaraja}.`;
+  const prompt = PROMPT_TEMPLATES[type](base);
+
+  try {
+    const requestBody = {
+      // Haiku 4.5 - eng arzon va tez model, bu turdagi vazifalar uchun yetarli.
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: useSearch ? 2800 : 2200,
+      messages: [{ role: 'user', content: prompt }],
+    };
+
+    if (useSearch) {
+      requestBody.tools = [{ type: 'web_search_20260209', name: 'web_search' }];
     }
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      res.status(500).json({ error: 'AI xizmatida xatolik', detail: errText });
+      return;
+    }
+
+    const data = await response.json();
+
+    let text = '';
+    const sources = new Map();
+    for (const block of data.content || []) {
+      if (block.type === 'text') {
+        text += block.text || '';
+        for (const c of block.citations || []) {
+          if (c.url && !sources.has(c.url)) {
+            sources.set(c.url, c.title || c.url);
+          }
+        }
+      }
+    }
+
+    let { summary, full } = splitSummaryAndFull(text);
+
+    // "slayd" turi uchun TO'LIQ qismi JSON massiv bo'lishi kerak — buni
+    // pptxgenjs orqali haqiqiy .pptx faylga aylantirish uchun ishlatamiz.
+    let slides = null;
+    if (type === 'slayd') {
+      try {
+        const cleaned = full.replace(/```json\s*|```/g, '').trim();
+        const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (Array.isArray(parsed)) slides = parsed;
+        }
+      } catch (e) {
+        slides = null; // model formatga rioya qilmasa, PPTX tugmasi shunchaki chiqmaydi
+      }
+
+      if (slides) {
+        if (sources.size > 0) {
+          slides.push({
+            title: 'Manbalar',
+            bullets: Array.from(sources, ([url, title]) => `${title} — ${url}`),
+          });
+        }
+        // PDF/Word uchun ham o'qish mumkin bo'lgan ko'rinishga aylantiramiz
+        full = slides.map((s, i) => `### Slayd ${i + 1}: ${s.title || ''}\n` + (s.bullets || []).map(b => `- ${b}`).join('\n')).join('\n\n');
+      } else if (sources.size > 0) {
+        full += '\n\n---\n\n**Manbalar:**\n' + Array.from(sources, ([url, title]) => `- [${title}](${url})`).join('\n');
+      }
+    } else if (sources.size > 0) {
+      full += '\n\n---\n\n**Manbalar:**\n' + Array.from(sources, ([url, title]) => `- [${title}](${url})`).join('\n');
+    }
+
+    const isFree = isAdmin ? true : await registerUseAndCheckFree(ip);
+    res.status(200).json({ summary, full, slides, isFree });
   } catch (e) {
-    errorEl.textContent = "Xatolik yuz berdi. Qayta urinib ko'ring.";
-    errorEl.style.display = 'block';
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '✨ Yaratish';
+    res.status(500).json({ error: 'Server xatosi' });
   }
 }
-
-function updateTotal() {
-  const count = Object.keys(results).length;
-  const totalEl = document.getElementById('total');
-  if (count > 0) {
-    totalEl.style.display = 'block';
-    totalEl.innerHTML = `To'langan materiallar: ${count} ta — jami: <strong style="color:#16213E;">${(count*4990).toLocaleString()} so'm</strong>`;
-  } else {
-    totalEl.style.display = 'none';
-  }
-}
-
-// Fan/Mavzu/Daraja o'zgarsa, eski natija va "to'landi" belgisini tozalaymiz.
-// Aks holda ikkita muammo bo'lardi: (1) eskirgan natija ekranda qolib,
-// yangi mavzuga tegishlidek ko'rinadi; (2) bir marta to'lagandan keyin
-// mavzuni almashtirib, yangi materialni bepul olish mumkin bo'lardi.
-function resetAllCards() {
-  Object.keys(META).forEach(type => {
-    const resultEl = document.querySelector(`[data-result="${type}"]`);
-    const actionsEl = document.querySelector(`[data-actions="${type}"]`);
-    const errorEl = document.querySelector(`[data-error="${type}"]`);
-    const hintEl = document.querySelector(`[data-hint="${type}"]`);
-    const fullEl = document.querySelector(`[data-full="${type}"]`);
-    if (resultEl) { resultEl.style.display = 'none'; resultEl.innerHTML = ''; }
-    if (actionsEl) { actionsEl.style.display = 'none'; actionsEl.innerHTML = ''; }
-    if (errorEl) { errorEl.style.display = 'none'; }
-    if (hintEl) { hintEl.style.display = 'none'; }
-    if (fullEl) { fullEl.innerHTML = ''; }
-    delete results[type];
-  });
-  updateTotal();
-}
-
-['fan', 'mavzu', 'daraja'].forEach(id => {
-  document.getElementById(id).addEventListener('input', resetAllCards);
-  document.getElementById(id).addEventListener('change', resetAllCards);
-});
-
-render();
-checkPendingPayment();
-</script>
-</body>
-</html>
