@@ -7,7 +7,7 @@
 // "## TO'LIQ" — faqat PDF/Word yuklab olishda beriladigan to'liq, ilmiy asoslangan matn
 const PROMPT_TEMPLATES = {
   material: (base) => `${base}\n\nSiz tajribali pedagog va fan mutaxassisisiz. Javobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nMavzuning eng muhim mag'zini 3-4 ta jumlada, kuchli va ixcham qilib bering.\n\n## TO'LIQ\nTo'liq, keng qamrovli va ilmiy asoslangan o'quv materiali yozing: (1) mavzuga kirish va ahamiyati, (2) asosiy ta'rif va tushunchalar, (3) kamida ikkita batafsil ishlangan misol, (4) amaliy qo'llanilishi, (5) chuqurroq tushunish uchun qo'shimcha izohlar. Aniq sarlavhalar bilan, batafsil yozing. O'zbek tilida.`,
-  slayd: (base) => `${base}\n\nJavobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nTaqdimotning 3-4 ta asosiy bo'lim nomini ro'yxat qilib bering (tafsilotsiz).\n\n## TO'LIQ\n9-10 ta slayd rejasini to'liq tuzing. Har bir slayd uchun "Slayd N: Sarlavha" va 3-4 ta qisqa bullet fikr yozing. O'zbek tilida.`,
+  slayd: (base) => `${base}\n\nJavobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nTaqdimotning 3-4 ta asosiy bo'lim nomini ro'yxat qilib bering (tafsilotsiz).\n\n## TO'LIQ\nShu yerga FAQAT JSON massiv yozing, boshqa hech qanday matn, izoh yoki markdown belgisi qo'shmang. Kamida 10 ta obyekt bo'lsin. Format aniq shunday bo'lsin:\n[{"title":"Slayd sarlavhasi","bullets":["fikr 1","fikr 2","fikr 3"]}]\nHar bir bullet qisqa (10-15 so'z) va mazmunli bo'lsin. O'zbek tilida.`,
   mashq: (base) => `${base}\n\nJavobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nMashqlar mavzusi haqida 2-3 jumlali umumiy ta'rif bering va namuna sifatida FAQAT bitta oddiy mashq (yechimisiz, faqat savol matni) ko'rsating.\n\n## TO'LIQ\n8-10 ta amaliy mashq tuzing: birinchi 3-4 tasi TO'LIQ YECHIMI bilan, qolganlari mustaqil bajarish uchun (faqat javob, yechimsiz). Aniq raqamlab yozing. O'zbek tilida.`,
   test: (base) => `${base}\n\nJavobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nTest mavzusi haqida qisqa umumiy ma'lumot bering va namuna sifatida FAQAT bitta test savolini (A,B,C,D variantlari bilan, javobsiz) ko'rsating.\n\n## TO'LIQ\n14-16 ta ko'p tanlovli test savoli tuzing (A,B,C,D variantlari bilan). Oxirida "Javoblar kaliti:" deb barcha to'g'ri javoblarni bering. O'zbek tilida, ixcham.`,
 };
@@ -171,16 +171,41 @@ export default async function handler(req, res) {
       }
     }
 
-    if (sources.size > 0) {
-      text += '\n\n---\n\n**Manbalar:**\n';
-      for (const [url, title] of sources) {
-        text += `- [${title}](${url})\n`;
+    let { summary, full } = splitSummaryAndFull(text);
+
+    // "slayd" turi uchun TO'LIQ qismi JSON massiv bo'lishi kerak — buni
+    // pptxgenjs orqali haqiqiy .pptx faylga aylantirish uchun ishlatamiz.
+    let slides = null;
+    if (type === 'slayd') {
+      try {
+        const cleaned = full.replace(/```json\s*|```/g, '').trim();
+        const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (Array.isArray(parsed)) slides = parsed;
+        }
+      } catch (e) {
+        slides = null; // model formatga rioya qilmasa, PPTX tugmasi shunchaki chiqmaydi
       }
+
+      if (slides) {
+        if (sources.size > 0) {
+          slides.push({
+            title: 'Manbalar',
+            bullets: Array.from(sources, ([url, title]) => `${title} — ${url}`),
+          });
+        }
+        // PDF/Word uchun ham o'qish mumkin bo'lgan ko'rinishga aylantiramiz
+        full = slides.map((s, i) => `### Slayd ${i + 1}: ${s.title || ''}\n` + (s.bullets || []).map(b => `- ${b}`).join('\n')).join('\n\n');
+      } else if (sources.size > 0) {
+        full += '\n\n---\n\n**Manbalar:**\n' + Array.from(sources, ([url, title]) => `- [${title}](${url})`).join('\n');
+      }
+    } else if (sources.size > 0) {
+      full += '\n\n---\n\n**Manbalar:**\n' + Array.from(sources, ([url, title]) => `- [${title}](${url})`).join('\n');
     }
 
-    const { summary, full } = splitSummaryAndFull(text);
     const isFree = isAdmin ? true : await registerUseAndCheckFree(ip);
-    res.status(200).json({ summary, full, isFree });
+    res.status(200).json({ summary, full, slides, isFree });
   } catch (e) {
     res.status(500).json({ error: 'Server xatosi' });
   }
