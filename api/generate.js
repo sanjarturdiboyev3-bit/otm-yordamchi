@@ -33,7 +33,12 @@ const ALLOWED_DARAJA = ['Maktab', 'Kollej', "OTM (bakalavriat)"];
 
 const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
 const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
-const RATE_LIMIT_MAX = 20; // bitta IP uchun 1 soatda maksimal so'rov soni
+// ==== DEMO REJIMI ====
+// true bo'lsa: to'lov so'ralmaydi, hamma material bepul yuklab olinadi.
+// Namoyish tugagach, buni false ga o'zgartiring — to'lov tizimi qayta ishlaydi.
+const DEMO_MODE = true;
+
+const RATE_LIMIT_MAX = 40; // bitta IP uchun 1 soatda maksimal so'rov soni
 const RATE_LIMIT_WINDOW_SECONDS = 3600;
 
 async function checkRateLimit(ip) {
@@ -83,6 +88,9 @@ async function registerUseAndCheckFree(ip) {
     return true;
   }
 }
+
+// Internet qidiruvi bilan javob sekinroq keladi — standart 10 soniya yetmasligi mumkin.
+export const maxDuration = 60;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -137,30 +145,57 @@ export default async function handler(req, res) {
     };
 
     if (useSearch) {
-      requestBody.tools = [{ type: 'web_search_20260209', name: 'web_search' }];
+      // web_search_20250305 — mustaqil ishlaydigan versiya.
+      // (Yangiroq web_search_20260209 o'zi bilan birga code_execution talab qiladi,
+      //  shuning uchun bu yerda ishlatilmaydi.)
+      // max_uses — qidiruvlar sonini cheklaydi: xarajat va kutish vaqtini tiyadi.
+      requestBody.tools = [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }];
     }
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const callApi = (body) => fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': process.env.ANTHROPIC_API_KEY,
         'anthropic-version': '2023-06-01',
       },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify(body),
     });
+
+    let response = await callApi(requestBody);
 
     if (!response.ok) {
       const errText = await response.text();
-      res.status(500).json({ error: 'AI xizmatida xatolik', detail: errText });
+      console.error('Anthropic API xatosi:', response.status, errText);
+      res.status(500).json({
+        error: useSearch
+          ? "Internetdan qidirishda xatolik. Belgini o'chirib qayta urinib ko'ring."
+          : 'AI xizmatida xatolik',
+        detail: errText,
+      });
       return;
     }
 
-    const data = await response.json();
+    let data = await response.json();
+    const allBlocks = [...(data.content || [])];
+
+    // Server vositalari (internet qidiruvi) ishlaganda API javobni "pauza"
+    // holatida qaytarishi mumkin — bunda suhbatni davom ettirish kerak,
+    // aks holda javob chala bo'lib qoladi.
+    let guard = 0;
+    const convo = [{ role: 'user', content: prompt }];
+    while (data.stop_reason === 'pause_turn' && guard < 3) {
+      guard++;
+      convo.push({ role: 'assistant', content: data.content });
+      response = await callApi({ ...requestBody, messages: convo });
+      if (!response.ok) break;
+      data = await response.json();
+      allBlocks.push(...(data.content || []));
+    }
 
     let text = '';
     const sources = new Map();
-    for (const block of data.content || []) {
+    for (const block of allBlocks) {
       if (block.type === 'text') {
         text += block.text || '';
         for (const c of block.citations || []) {
@@ -219,7 +254,7 @@ export default async function handler(req, res) {
       full += '\n\n---\n\n**Manbalar:**\n' + Array.from(sources, ([url, title]) => `- [${title}](${url})`).join('\n');
     }
 
-    const isFree = isAdmin ? true : await registerUseAndCheckFree(ip);
+    const isFree = (DEMO_MODE || isAdmin) ? true : await registerUseAndCheckFree(ip);
     res.status(200).json({ summary, full, slides, reja, isFree });
   } catch (e) {
     res.status(500).json({ error: 'Server xatosi' });
