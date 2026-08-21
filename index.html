@@ -263,6 +263,7 @@ const ICONS_B64 = {
 const results = {};
 const slidesData = {}; // "slayd" turi uchun tuzilgan (JSON) ma'lumotlar, PPTX yasashda ishlatiladi
 const rejaData = {};   // taqdimotning reja bandlari
+const fullRaw = {};    // xom (formatlanmagan) to'liq matn — Word hujjati shundan quriladi
 
 // Diqqat: prompt matni endi mijoz tomonida QURILMAYDI — buni serverga
 // (api/generate.js) ko'chirdik, chunki avvalgi usulda istalgan kishi
@@ -320,10 +321,78 @@ async function downloadAsPDF(el, filename) {
   }
 }
 
-function downloadAsWord(el, filename) {
-  const pre = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>" + filename + "</title></head><body style=\"font-family:Calibri,Arial,sans-serif;\">";
-  const post = '</body></html>';
-  const html = pre + el.innerHTML + post;
+// Word hujjati ekrandagi HTML'dan emas, XOM matndan quriladi.
+// Shu sababli hujjatda rang, ramka, chiziq yoki markdown belgilari qolmaydi.
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Matn ichidagi belgilarni tozalaydi: **qalin**, LaTeX, ro'yxat chiziqchalari va h.k.
+function cleanInline(s) {
+  let t = String(s);
+  t = t.replace(/\$\$([\s\S]*?)\$\$/g, '$1');   // $$...$$
+  t = t.replace(/\$([^$\n]+?)\$/g, '$1');        // $...$
+  t = t.replace(/`([^`]*)`/g, '$1');
+  t = escapeHtml(t);
+  t = t.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+  t = t.replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, '$1$2'); // kursivni oddiy matnga
+  t = t.replace(/\\[a-zA-Z]+\{?|\}/g, '');       // qolgan LaTeX buyruqlari
+  return t.trim();
+}
+
+function buildWordHtml(rawText, meta) {
+  const lines = String(rawText).replace(/\r/g, '').split('\n');
+  let body = '';
+  let para = [];
+
+  const flush = () => {
+    if (!para.length) return;
+    const txt = cleanInline(para.join(' '));
+    if (txt) body += '<p class=t>' + txt + '</p>';
+    para = [];
+  };
+
+  for (let raw of lines) {
+    const line = raw.trim();
+    if (!line) { flush(); continue; }
+    if (/^-{3,}$/.test(line) || /^\|/.test(line)) { flush(); continue; } // chiziq va jadval — o'tkazib yuboriladi
+    const h = line.match(/^(#{1,6})\s+(.*)$/);
+    if (h) {
+      flush();
+      const t = cleanInline(h[2]).replace(/<\/?b>/g, '');
+      if (t) body += '<p class=h>' + t + '</p>';
+      continue;
+    }
+    // ro'yxat belgisi olib tashlanadi, matn oddiy abzas bo'lib qoladi
+    const li = line.match(/^\s*(?:[-*\u2022\u25AA]|\d+[.)])\s+(.*)$/);
+    if (li) { flush(); const t = cleanInline(li[1]); if (t) body += '<p class=t>' + t + '</p>'; continue; }
+    para.push(line);
+  }
+  flush();
+
+  const title = cleanInline(meta.mavzu || '').replace(/<\/?b>/g, '');
+  const sub = cleanInline([meta.fan, meta.daraja].filter(Boolean).join(' \u2014 ')).replace(/<\/?b>/g, '');
+  const head = (title ? '<p class=title>' + title + '</p>' : '')
+             + (sub ? '<p class=sub>' + sub + '</p>' : '');
+
+  return '<html xmlns:o="urn:schemas-microsoft-com:office:office" '
+    + 'xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'
+    + '<head><meta charset="utf-8"><title>' + escapeHtml(meta.title || 'Hujjat') + '</title>'
+    + '<style>'
+    /* O'zbekiston oliy ta'limida qabul qilingan hujjat me'yorlari:
+       A4, chap 3 sm, o'ng 1,5 sm, tepa/past 2 sm, Times New Roman 14, 1,5 interval */
+    + '@page { size:21cm 29.7cm; margin:2cm 1.5cm 2cm 3cm; }'
+    + 'body { font-family:"Times New Roman",serif; font-size:14pt; color:#000000; }'
+    + 'p { margin:0; }'
+    + 'p.t { text-align:justify; text-indent:1.25cm; line-height:150%; margin-bottom:0pt; }'
+    + 'p.h { text-align:left; text-indent:0; font-weight:bold; line-height:150%; margin:14pt 0 6pt; }'
+    + 'p.title { text-align:center; text-indent:0; font-weight:bold; font-size:16pt; line-height:150%; margin-bottom:4pt; }'
+    + 'p.sub { text-align:center; text-indent:0; line-height:150%; margin-bottom:16pt; }'
+    + '</style></head><body>' + head + body + '</body></html>';
+}
+
+function downloadAsWord(rawText, meta, filename) {
+  const html = buildWordHtml(rawText, meta);
   const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -556,8 +625,14 @@ async function handlePdfClick(type, btn) {
 }
 
 function handleWordClick(type) {
-  const fullEl = document.querySelector(`[data-full="${type}"]`);
-  exportWithHeader(fullEl, type, (el, name) => downloadAsWord(el, name), buildFilename(type));
+  // Word hujjati ekrandagi ko'rinishdan emas, xom matndan quriladi —
+  // shu bois unda rang, ramka yoki markdown belgilari bo'lmaydi.
+  const fan = (document.getElementById('fan').value || '').trim();
+  const mavzu = (document.getElementById('mavzu').value || META[type].title).trim();
+  const daraja = document.getElementById('daraja').value;
+  const raw = fullRaw[type];
+  if (!raw) { alert("Avval materialni yarating."); return; }
+  downloadAsWord(raw, { fan, mavzu, daraja, title: META[type].title }, buildFilename(type));
 }
 
 function showDownloadButtons(type) {
@@ -766,6 +841,7 @@ async function generate(type) {
     const fullEl = document.querySelector(`[data-full="${type}"]`);
     renderContent(fullEl, data.full);
     document.querySelector(`[data-hint="${type}"]`).style.display = 'block';
+    fullRaw[type] = data.full || '';
     if (data.slides) slidesData[type] = data.slides;
     if (data.reja) rejaData[type] = data.reja;
     if (data.isFree) {
@@ -814,6 +890,7 @@ function resetAllCards() {
     delete results[type];
     delete slidesData[type];
     delete rejaData[type];
+    delete fullRaw[type];
   });
   updateTotal();
 }
