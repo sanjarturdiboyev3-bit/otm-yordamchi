@@ -9,172 +9,269 @@ const PROMPT_TEMPLATES = {
   material: (base) => `${base}\n\nYOZISH QOIDALARI (qat'iy amal qiling):\n- Matn ILMIY USLUBDA, akademik tilda, uzluksiz nasr ko'rinishida yozilsin — dissertatsiya matni kabi.\n- Bulletli ro'yxat, chiziqcha bilan sanash, jadval va gorizontal chiziqlar ISHLATILMASIN. Fikrlar to'liq abzaslar bilan bayon etilsin.\n- Matematik formulalar, tenglamalar, matritsalar va ifodalar ALBATTA LaTeX ko'rinishida yozilsin: matn ichidagi kichik ifodalar uchun $...$, alohida qatorga chiqadigan katta formulalar uchun $$...$$. Masalan: $f(x) = 2x + 3$ yoki $$\\frac{a + b}{c} = \\sqrt{x^2 + y^2}$$. Kasr, ildiz, daraja, indeks, integral, yig'indi va matritsalar aynan LaTeX bilan yozilsin — oddiy matnda yozilsa ifoda buziladi.\n- LaTeX faqat formulalar uchun ishlatilsin; oddiy matn ichida $ belgisi ishlatilmasin.\n- Har bir abzas kamida 5-7 ta to'liq jumladan iborat bo'lsin.\n- Bo'lim sarlavhalari '## ' bilan boshlansin (ular hujjatda oddiy qalin sarlavhaga aylantiriladi).\n- Ta'riflar aniq, misollar batafsil ishlangan, ilmiy asoslar (qonuniyat, teorema, tamoyil, tadqiqot natijasi) ko'rsatilgan bo'lsin.\n- HAJM: TO'LIQ qism kamida 3500 so'zdan iborat bo'lsin (A4 formatda, Times New Roman 14, 1,5 interval bilan taxminan 10-12 bet). Bu majburiy talab — matnni yuzaki qisqartirmang.\n\nJavobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nMavzuning eng muhim mag'zini 3-4 ta jumlada bering.\n\n## TO'LIQ\nMavzu bo'yicha to'liq ilmiy-nazariy o'quv materialini yozing. Tuzilishi quyidagicha bo'lsin va har bir bo'lim chuqur yoritilsin:\n## Kirish\nMavzuning ilmiy va amaliy ahamiyati, o'rganilish zarurati.\n## Mavzuning nazariy asoslari\nAsosiy ta'riflar, tushunchalar, tarixiy shakllanishi, sohaga qo'shgan olimlar va ularning qarashlari.\n## Asosiy qonuniyatlar va xossalar\nTegishli qoida, teorema yoki tamoyillar hamda ularning izohi va asoslanishi.\n## Ishlangan misollar va tahlil\nKamida uchta batafsil, bosqichma-bosqich yechilgan misol yoki holat tahlili.\n## Amaliy qo'llanilishi\nMavzuning fan, texnika, ta'lim yoki kundalik hayotdagi tatbiqi.\n## Xulosa\nUmumlashtiruvchi mulohazalar.\n\nBarchasi o'zbek tilida.`,
   slayd: (base) => `${base}
 
-Siz oliy ta'lim uchun professional akademik taqdimot tayyorlovchi AI yordamchisiz.
+SEN OTM O'QITUVCHILARI UCHUN PROFESSIONAL TAQDIMOT DIZAYNERI VA PEDAGOGIK KONTENT MUTAXASSISISAN.
 
-VAZIFA:
-Berilgan fan, mavzu va ta'lim darajasi asosida mazmunan boy, ilmiy asoslangan va mantiqiy ketma-ketlikka ega taqdimot tayyorlang.
+Vazifa: berilgan fan, mavzu va ta'lim darajasi asosida universitet o'qituvchisi foydalanishi mumkin bo'lgan zamonaviy, ilmiy, pedagogik jihatdan asoslangan va vizual jihatdan boy taqdimot rejasini yaratish.
 
-ASOSIY TALABLAR:
+MUHIM:
+Bu ma'ruza matni emas. Taqdimotdagi matn qisqa, aniq va vizual material bilan uyg'un bo'lishi kerak. O'qituvchi asosiy mazmunni og'zaki tushuntiradi, slayd esa unga tayanch vazifasini bajaradi.
 
-1. Taqdimot ANIQ 5 ta reja bo'limidan tashkil topishi kerak.
+========================
+TAQDIMOT STANDARTLARI
+========================
 
-2. Har bir reja bo'limiga ANIQ 3 tadan slayd ajratilsin.
+1. Format 16:9 keng ekran formatiga mos bo'lsin.
 
-3. Jami ANIQ 15 ta asosiy slayd bo'lsin.
+2. Taqdimot universitetning yagona shabloniga joylashtirishga mos bo'lsin.
 
-4. Har bir slaydda:
-   - section
-   - title
-   - key
-   - bullets
-   maydonlari bo'lsin.
+3. Sarlavhalar 32-40 pt o'lchamga mos, qisqa va aniq bo'lsin.
 
-5. Har bir slaydda ANIQ 5 ta bullet bo'lsin.
+4. Asosiy matn 20-24 pt o'lchamga mos bo'lsin. 18 pt dan kichik matn yaratmang.
 
-6. Har bir bullet to'liq, mazmunli va ilmiy jumla bo'lsin. Bulletlar faqat kalit so'z yoki qisqa iboradan iborat bo'lmasin.
+5. Har bir slaydda maksimal 6 qator asosiy matn bo'lsin.
 
-7. Har bir bullet taxminan 18-30 ta so'zdan iborat bo'lsin.
+6. Har bir bullet imkon qadar 6-10 so'zdan oshmasin.
 
-8. Har bir slaydning "key" maydoni bitta kuchli umumlashtiruvchi jumladan iborat bo'lsin. U taxminan 12-20 ta so'z bo'lsin va bulletlardan aynan ko'chirilmasin.
+7. Har bir slaydda odatda 3-5 ta bullet bo'lsin.
 
-9. Slaydlar bir-birini takrorlamasin.
+8. Uzun paragraf, katta matn bloklari va dissertatsiya uslubidagi matn QAT'IYAN TAQIQLANADI.
 
-10. Mavzu umumiy tushunchadan nazariy asosga, nazariy asosdan amaliyotga va amaliyotdan xulosaga qarab rivojlansin.
+9. Har bir slayd faqat BITTA asosiy g'oyani ifodalasin.
 
-REJA TUZISH:
+10. Slayddagi matn qisqa bo'lsin, lekin ilmiy mazmunni yo'qotmasin.
 
-5 ta reja imkon qadar quyidagi mantiq asosida tuzilsin:
+11. Taqdimotning taxminan 40-50 foiz vizual qismi rasm, diagramma, infografika, jadval, sxema, timeline, comparison, ikonka yoki boshqa ko'rgazmali elementlardan iborat bo'lsin.
 
-1-reja — mavzuning umumiy tushunchasi, mohiyati va asosiy ta'riflari.
+12. Vizual element faqat bezak uchun ishlatilmasin. U slayddagi fikrni tushuntirishga xizmat qilsin.
 
-2-reja — mavzuning nazariy asoslari, tarkibi, turlari yoki tasnifi.
+13. Mavzuga aloqasiz umumiy "technology", "education", "business" kabi tasodifiy rasmlar tanlanmasin.
 
-3-reja — asosiy qonuniyatlar, tamoyillar, formulalar, teoremalar yoki mexanizmlar.
+14. Mavhum tushunchalar uchun imkon qadar diagramma, sxema, infografika yoki tushunchani ifodalovchi konkret obyekt ishlatilsin.
 
-4-reja — amaliy qo'llanilishi, usullari, texnologiyalari yoki real jarayonlari.
+15. Bir xil rasm yoki bir xil vizual g'oya takrorlanmasin.
 
-5-reja — amaliy misollar, masalalar, tahlil va umumiy xulosalar.
+16. Zarur joylarda:
+- taqqoslash;
+- jarayon sxemasi;
+- sabab-oqibat diagrammasi;
+- klassifikatsiya;
+- timeline;
+- jadval;
+- infografika
+ishlatilsin.
 
-Agar fan yoki mavzu xususiyati sababli bu tuzilma mos kelmasa, uni mavzuga mos ravishda o'zgartiring, lekin 5 ta reja va 15 ta slayd talabini saqlang.
+17. Taqdimot ilmiy bo'lsin, ammo matnga to'ldirib tashlanmasin.
 
-HAR BIR REJANING 3 TA SLAYDI:
+========================
+PEDAGOGIK STRUKTURA
+========================
 
-Har bir reja ichidagi uchta slayd turli vazifani bajarsin.
+Taqdimot 12-14 ta slayd bo'lsin.
 
-Birinchi slayd — tushuncha, ta'rif va nazariy mazmun.
+1-slayd:
+TITUL.
+Fan nomi, mavzu, OTM, kafedra va o'qituvchi F.I.Sh. uchun joy.
 
-Ikkinchi slayd — xususiyat, tasnif, tuzilish, mexanizm yoki qonuniyat.
+2-slayd:
+MOTIVATSION KIRISH.
+Mavzuning dolzarbligini ochadigan muammoli savol, real vaziyat yoki qiziqarli ilmiy fakt.
 
-Uchinchi slayd — misol, amaliy qo'llanish, tahlil yoki real vaziyat.
+3-slayd:
+DARS MAQSADI VA KUTILAYOTGAN NATIJALAR.
+3-5 ta aniq va o'lchanadigan natija.
 
-Mavzuga qarab ushbu mazmunni moslashtiring.
+4-slayd:
+INTERAKTIV KIRISH.
+Talabalarni jalb qiladigan savol, mini-so'rov, QR-kod yoki tezkor fikrlash topshirig'i.
 
-ILMIYLIK:
+5-slayd:
+ASOSIY TUSHUNCHA.
+Mavzuning asosiy ta'rifi va mohiyati.
 
-Mavzuga tegishli bo'lsa, olimlar, nazariyalar, muhim sanalar, formulalar, teoremalar, qonuniyatlar, statistik ma'lumotlar, real misollar va ilmiy terminlardan foydalaning.
+6-slayd:
+TUZILISHI / TASNIFI.
+Mavzuning tarkibiy qismlari, turlari yoki klassifikatsiyasi.
 
-Faktlarni uydirmang.
+7-slayd:
+MEXANIZM / JARAYON.
+Mavzu qanday ishlashi yoki qanday amalga oshishini sxema yoki jarayon orqali tushuntirish.
 
-Formula kerak bo'lsa oddiy matn ko'rinishida yozing.
+8-slayd:
+AMALIY MISOL.
+Nazariy tushunchani real vaziyat, misol yoki obyekt orqali ko'rsatish.
 
-Masalan:
-f(x) = 2x + 3
+9-slayd:
+VIZUAL MEDIA.
+Mavzuga mos video, animatsiya, demonstratsiya yoki QR havola uchun joy. Video mazmunini aniq tavsiflash.
 
-yoki:
+10-slayd:
+AMALIY TAHLIL / KEYS-STADI.
+Real yoki realga yaqin vaziyat asosida muammoli topshiriq.
 
-a² + b² = c²
+11-slayd:
+INTERAKTIV MUSTAHKAMLASH.
+3-5 ta ekspress savol, quiz yoki QR orqali test.
 
-LaTeX ishlatmang.
+12-slayd:
+XULOSA.
+Mavzuning 3 ta eng muhim g'oyasi.
 
-RASM QIDIRUVLARI:
+13-slayd:
+MUSTAQIL TA'LIM.
+2-3 ta aniq mustaqil topshiriq.
 
-"rasmSorovlari" massivida ANIQ 5 ta element bo'lsin.
+14-slayd:
+YAKUNIY SLAYD.
+Refleksiya savoli yoki qisqa yakuniy xulosa.
 
-Har bir element tegishli reja bo'limiga mos rasmni Wikimedia Commons kabi ochiq manbalardan izlash uchun INGLIZ TILIDAGI 2-5 so'zli qidiruv iborasi bo'lsin.
+Agar mavzu 14 ta slaydga mos kelmasa, 12-16 oralig'ida optimal son tanlanishi mumkin. Lekin motivatsiya, maqsad, interaktivlik, nazariya, amaliyot, mustahkamlash, xulosa va mustaqil topshiriq elementlari saqlanishi shart.
 
-Masalan:
-"triangle geometry diagram"
-"photosynthesis process"
-"artificial intelligence education"
+========================
+VIZUAL REJALASHTIRISH
+========================
 
-Rasm qidiruvlari mavzuga aniq mos bo'lsin va 5 ta reja tartibida joylashsin.
+HAR BIR SLAYDDA "visual" OBYEKTI BO'LISHI SHART.
 
-JAVOB FORMATI JUDA MUHIM:
+visual.type quyidagi qiymatlardan faqat bittasi bo'lishi mumkin:
 
-Javobingizni ANIQ ikki qismga ajrating.
+"photo"
+"diagram"
+"infographic"
+"table"
+"process"
+"timeline"
+"comparison"
+"illustration"
+"qr"
+"video"
+"icons"
+"none"
 
-Birinchi qism:
+visual.description:
+Slaydda qanday vizual bo'lishini O'ZBEK TILIDA aniq tavsiflang.
+
+visual.searchQuery:
+Agar real rasm kerak bo'lsa, 2-5 so'zdan iborat INGLIZCHA qidiruv so'rovi yozing.
+
+Agar diagramma, jadval, sxema yoki infografika rasm qidirishdan ko'ra foydaliroq bo'lsa:
+
+"searchQuery": ""
+
+bo'lsin.
+
+RASMLAR UCHUN QOIDALAR:
+
+- Rasm slayd mazmuniga bevosita mos bo'lsin.
+- Rasm professional va zamonaviy bo'lsin.
+- Rasm mavzuni tushuntirsin.
+- Bir xil rasmga olib boradigan qidiruv so'rovlari takrorlanmasin.
+- Iloji bo'lsa ochiq litsenziyali yoki Wikimedia Commons kabi manbalardagi materiallarga mos qidiruv so'rovi berilsin.
+- Mavzuga mos konkret obyekt yoki hodisa tanlansin.
+- "education", "technology", "student" kabi haddan tashqari umumiy qidiruv so'rovlari ishlatilmasin.
+
+========================
+SLAYD MAZMUNI
+========================
+
+Har bir slayd quyidagi obyektga ega bo'lsin:
+
+{
+  "number": 1,
+  "section": 1,
+  "title": "Slayd sarlavhasi",
+  "key": "Slaydning eng muhim g'oyasini ifodalovchi bitta kuchli jumla",
+  "bullets": [
+    "Qisqa mazmunli fikr",
+    "Qisqa mazmunli fikr",
+    "Qisqa mazmunli fikr"
+  ],
+  "visual": {
+    "type": "diagram",
+    "description": "Mazmunni tushuntiruvchi diagramma tavsifi",
+    "searchQuery": ""
+  }
+}
+
+"key" 12-20 so'zdan iborat bo'lsin.
+
+"key" bulletlarni aynan takrorlamasin. Ularni umumlashtirsin.
+
+Har bir bullet:
+- qisqa;
+- aniq;
+- ilmiy mazmunli;
+- bitta fikrni ifodalovchi
+bo'lsin.
+
+Har bir slaydda 3-5 ta bullet bo'lsin.
+
+========================
+JSON FORMAT
+========================
+
+Javobingiz ANIQ ikki qismdan iborat bo'lsin.
 
 ## QISQACHA
 
-Bu yerda faqat 5 ta reja nomini qisqacha ko'rsating.
-
-Ikkinchi qism:
+Taqdimotning 3-4 ta asosiy bo'lim nomini yozing.
 
 ## TO'LIQ
 
-Bu yerdan keyin FAQAT JSON obyekt yozing.
+FAQAT JSON obyektini yozing.
 
-JSONdan oldin yoki keyin hech qanday izoh yozmang.
+JSONdan oldin yoki keyin hech qanday izoh, markdown yoki kod belgisi yozmang.
 
-JSON quyidagi tuzilishga ega bo'lsin:
+JSON quyidagi strukturaga ega bo'lsin:
 
 {
   "reja": [
-    "Birinchi reja",
-    "Ikkinchi reja",
-    "Uchinchi reja",
-    "To'rtinchi reja",
-    "Beshinchi reja"
-  ],
-  "rasmSorovlari": [
-    "english search query 1",
-    "english search query 2",
-    "english search query 3",
-    "english search query 4",
-    "english search query 5"
+    "Birinchi reja bandi",
+    "Ikkinchi reja bandi",
+    "Uchinchi reja bandi",
+    "To'rtinchi reja bandi",
+    "Beshinchi reja bandi"
   ],
   "slides": [
     {
-      "section": 1,
-      "title": "Slayd sarlavhasi",
-      "key": "Asosiy ilmiy g'oya.",
+      "number": 1,
+      "section": 0,
+      "title": "Titul slaydi",
+      "key": "Taqdimotning asosiy g'oyasini ifodalovchi jumla",
       "bullets": [
-        "Birinchi mazmunli ilmiy jumla.",
-        "Ikkinchi mazmunli ilmiy jumla.",
-        "Uchinchi mazmunli ilmiy jumla.",
-        "To'rtinchi mazmunli ilmiy jumla.",
-        "Beshinchi mazmunli ilmiy jumla."
-      ]
+        "Fan nomi",
+        "Mavzu nomi",
+        "O'qituvchi F.I.Sh."
+      ],
+      "visual": {
+        "type": "illustration",
+        "description": "Mavzuga mos professional titul vizuali",
+        "searchQuery": "specific English search query"
+      }
     }
   ]
 }
 
-MUHIM:
+QAT'IY NAZORAT:
 
-"reja" massivida ANIQ 5 ta element bo'lsin.
-
-"rasmSorovlari" massivida ANIQ 5 ta element bo'lsin.
-
-"slides" massivida ANIQ 15 ta element bo'lsin.
-
-section qiymatlari quyidagi tartibda bo'lsin:
-
-1, 1, 1,
-2, 2, 2,
-3, 3, 3,
-4, 4, 4,
-5, 5, 5
-
-Har bir slaydda ANIQ 5 ta bullet bo'lsin.
-
-JSON sintaksisi to'g'ri bo'lsin.
-
-JSON ichida izoh yozmang.
-
-Markdown code block ishlatmang.
-
-Barcha asosiy matn o'zbek tilida bo'lsin.
+- 12-16 ta slayd.
+- 1-slayd titul.
+- 2-slayd motivatsiya.
+- 3-slayd maqsad va natijalar.
+- 4-slayd interaktiv kirish.
+- 5-8-slaydlar asosiy mazmun.
+- 9-slayd media.
+- 10-slayd keys-stadi.
+- 11-slayd ekspress-test.
+- 12-slayd xulosa.
+- 13-slayd mustaqil topshiriq.
+- 14-slayd yakuniy slayd.
+- Har bir slaydda visual obyekti bo'lishi shart.
+- Kamida 6 ta slaydda real yoki grafik vizual bo'lishi shart.
+- Matn uzun bo'lmasin.
+- 6x6 tamoyiliga yaqin ixchamlik saqlansin.
+- Ma'ruza matni slaydga ko'chirilmasin.
+- Barcha matn o'zbek tilida bo'lsin.
+`
 
 ${base}`,
   mashq: (base) => `${base}\n\nYOZISH QOIDALARI (qat'iy amal qiling):\n- Matn ILMIY USLUBDA, akademik tilda, uzluksiz nasr ko'rinishida yozilsin — dissertatsiya matni kabi.\n- Bulletli ro'yxat, chiziqcha bilan sanash, jadval va gorizontal chiziqlar ISHLATILMASIN. Fikrlar to'liq abzaslar bilan bayon etilsin.\n- LaTeX belgilari ($, \\frac, \\begin va h.k.) ISHLATILMASIN. Formulalar oddiy matn ko'rinishida yozilsin, masalan: f(x) = 2x + 3, yoki a kvadrat + b kvadrat = c kvadrat.\n- Har bir abzas kamida 5-7 ta to'liq jumladan iborat bo'lsin.\n- Bo'lim sarlavhalari '## ' bilan boshlansin (ular hujjatda oddiy qalin sarlavhaga aylantiriladi).\n- Ta'riflar aniq, misollar batafsil ishlangan, ilmiy asoslar (qonuniyat, teorema, tamoyil, tadqiqot natijasi) ko'rsatilgan bo'lsin.\n- HAJM: TO'LIQ qism kamida 3500 so'zdan iborat bo'lsin (A4 formatda, Times New Roman 14, 1,5 interval bilan taxminan 10-12 bet). Bu majburiy talab — matnni yuzaki qisqartirmang.\n\nJavobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nMashqlar mavzusi haqida 2-3 jumlali umumiy ta'rif bering.\n\n## TO'LIQ\nAmaliy mashg'ulot uchun to'liq metodik material yozing:\n## Nazariy kirish\nMashqlarni bajarish uchun zarur nazariy asos, ishlatiladigan qoida va formulalar hamda ularning kelib chiqishi.\n## Namunaviy yechimlar\nKamida OLTITA masala. Har biri uchun: masala shartini yozing, so'ng yechimni bosqichma-bosqich bayon eting, har bir qadamda QAYSI qoida yoki teoremaga tayanilayotganini ilmiy asoslab tushuntiring, oxirida javobni va uning to'g'riligini tekshirishni ko'rsating.\n## Murakkabroq masalalar\nKamida UCHTA chuqurlashtirilgan masala to'liq yechimi va ilmiy izohi bilan.\n## Mustaqil ishlash uchun topshiriqlar\nKamida o'nta topshiriq, har biri uchun faqat javob va qisqa ko'rsatma.\n## Uslubiy tavsiyalar\nO'qituvchi uchun mashqlarni tashkil etish bo'yicha ko'rsatmalar, tipik xatolar va ularning oldini olish.\n\nBarchasi o'zbek tilida.`,
