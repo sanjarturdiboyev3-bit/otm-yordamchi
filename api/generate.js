@@ -7,7 +7,7 @@
 // "## TO'LIQ" — faqat PDF/Word yuklab olishda beriladigan to'liq, ilmiy asoslangan matn
 const PROMPT_TEMPLATES = {
   material: (base) => `${base}\n\nSiz tajribali pedagog va fan mutaxassisisiz. Javobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nMavzuning eng muhim mag'zini 3-4 ta jumlada, kuchli va ixcham qilib bering.\n\n## TO'LIQ\nTo'liq, keng qamrovli va ilmiy asoslangan o'quv materiali yozing: (1) mavzuga kirish va ahamiyati, (2) asosiy ta'rif va tushunchalar, (3) kamida ikkita batafsil ishlangan misol, (4) amaliy qo'llanilishi, (5) chuqurroq tushunish uchun qo'shimcha izohlar. Aniq sarlavhalar bilan, batafsil yozing. O'zbek tilida.`,
-  slayd: (base) => `${base}\n\nJavobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nTaqdimotning 3-4 ta asosiy bo'lim nomini ro'yxat qilib bering (tafsilotsiz).\n\n## TO'LIQ\nShu yerga FAQAT JSON massiv yozing, boshqa hech qanday matn, izoh yoki markdown belgisi qo'shmang. Kamida 10 ta obyekt bo'lsin. Format aniq shunday bo'lsin:\n[{"title":"Slayd sarlavhasi","bullets":["fikr 1","fikr 2","fikr 3"]}]\nHar bir bullet qisqa (10-15 so'z) va mazmunli bo'lsin. O'zbek tilida.`,
+  slayd: (base) => `${base}\n\nJavobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nTaqdimotning 3-4 ta asosiy bo'lim nomini ro'yxat qilib bering (tafsilotsiz).\n\n## TO'LIQ\nShu yerga FAQAT JSON obyekt yozing, boshqa hech qanday matn, izoh yoki markdown belgisi qo'shmang.\n\nTuzilma quyidagicha bo'lsin:\n1) "reja" — mavzuni TO'LIQ yorituvchi 5 ta reja bandi (qisqa sarlavha ko'rinishida, mantiqiy ketma-ketlikda: umumiydan xususiyga).\n2) "slides" — har bir reja bandi uchun ANIQ 3 tadan slayd, ya'ni jami 15 ta slayd. Har bir slaydda "section" (reja bandi tartib raqami, 1 dan boshlanadi), "title" (shu slaydning o'z sarlavhasi), "bullets" va "key" bo'lsin.\n\n"key" — shu slaydning eng muhim mag'zi: bitta yodda qoladigan, kuchli jumla (12-20 so'z). U bulletlardagi jumlani AYNAN takrorlamasin, balki ularni umumlashtirsin.\n\nMUHIM talablar:\n- Har bir slaydda 5-6 ta bullet bo'lsin va har bir bullet TO'LIQ, mazmunli jumla bo'lsin (30-45 so'z) — quruq bir-ikki so'zli ibora emas. Slayd matni to'yingan va mazmunga boy bo'lishi shart.\n- Bulletlar nazariy jihatdan asosli bo'lsin: ta'riflar, sabab-oqibat, tasnif, muhim sana/raqamlar, olimlar nomi, formulalar yoki aniq misollar bilan to'ldirilsin.\n- Bir reja bandiga tegishli 3 ta slayd bir-birini takrorlamasin: masalan 1-slayd tushuncha va ta'rif, 2-slayd tuzilishi/tasnifi yoki mexanizmi, 3-slayd misol va amaliy ahamiyati.\n\nFormat aniq shunday bo'lsin:\n{"reja":["Birinchi reja bandi","Ikkinchi reja bandi"],"slides":[{"section":1,"title":"Slayd sarlavhasi","key":"Eng muhim mag'zi bitta jumlada","bullets":["to'liq jumla 1","to'liq jumla 2","to'liq jumla 3","to'liq jumla 4"]}]}\n\nBarchasi o'zbek tilida yozilsin.`,
   mashq: (base) => `${base}\n\nJavobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nMashqlar mavzusi haqida 2-3 jumlali umumiy ta'rif bering va namuna sifatida FAQAT bitta oddiy mashq (yechimisiz, faqat savol matni) ko'rsating.\n\n## TO'LIQ\n8-10 ta amaliy mashq tuzing: birinchi 3-4 tasi TO'LIQ YECHIMI bilan, qolganlari mustaqil bajarish uchun (faqat javob, yechimsiz). Aniq raqamlab yozing. O'zbek tilida.`,
   test: (base) => `${base}\n\nJavobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nTest mavzusi haqida qisqa umumiy ma'lumot bering va namuna sifatida FAQAT bitta test savolini (A,B,C,D variantlari bilan, javobsiz) ko'rsating.\n\n## TO'LIQ\n14-16 ta ko'p tanlovli test savoli tuzing (A,B,C,D variantlari bilan). Oxirida "Javoblar kaliti:" deb barcha to'g'ri javoblarni bering. O'zbek tilida, ixcham.`,
 };
@@ -132,7 +132,7 @@ export default async function handler(req, res) {
     const requestBody = {
       // Haiku 4.5 - eng arzon va tez model, bu turdagi vazifalar uchun yetarli.
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: useSearch ? 2800 : 2200,
+      max_tokens: type === 'slayd' ? 8000 : (useSearch ? 2800 : 2200),
       messages: [{ role: 'user', content: prompt }],
     };
 
@@ -173,15 +173,25 @@ export default async function handler(req, res) {
 
     let { summary, full } = splitSummaryAndFull(text);
 
-    // "slayd" turi uchun TO'LIQ qismi JSON massiv bo'lishi kerak — buni
+    // "slayd" turi uchun TO'LIQ qismi JSON bo'lishi kerak — buni
     // pptxgenjs orqali haqiqiy .pptx faylga aylantirish uchun ishlatamiz.
     let slides = null;
+    let reja = null;
     if (type === 'slayd') {
       try {
         const cleaned = full.replace(/```json\s*|```/g, '').trim();
-        const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
+        // Yangi format — {reja:[...], slides:[...]}; eskisi — oddiy massiv.
+        const objMatch = cleaned.match(/\{[\s\S]*\}/);
+        const arrMatch = cleaned.match(/\[[\s\S]*\]/);
+        if (objMatch) {
+          const parsed = JSON.parse(objMatch[0]);
+          if (Array.isArray(parsed.slides)) {
+            slides = parsed.slides;
+            reja = Array.isArray(parsed.reja) ? parsed.reja : null;
+          }
+        }
+        if (!slides && arrMatch) {
+          const parsed = JSON.parse(arrMatch[0]);
           if (Array.isArray(parsed)) slides = parsed;
         }
       } catch (e) {
@@ -196,7 +206,12 @@ export default async function handler(req, res) {
           });
         }
         // PDF/Word uchun ham o'qish mumkin bo'lgan ko'rinishga aylantiramiz
-        full = slides.map((s, i) => `### Slayd ${i + 1}: ${s.title || ''}\n` + (s.bullets || []).map(b => `- ${b}`).join('\n')).join('\n\n');
+        let md = '';
+        if (reja && reja.length) {
+          md += '### Reja\n' + reja.map((r, i) => `${i + 1}. ${r}`).join('\n') + '\n\n';
+        }
+        md += slides.map((s, i) => `### Slayd ${i + 1}: ${s.title || ''}\n` + (s.bullets || []).map(b => `- ${b}`).join('\n')).join('\n\n');
+        full = md;
       } else if (sources.size > 0) {
         full += '\n\n---\n\n**Manbalar:**\n' + Array.from(sources, ([url, title]) => `- [${title}](${url})`).join('\n');
       }
@@ -205,7 +220,7 @@ export default async function handler(req, res) {
     }
 
     const isFree = isAdmin ? true : await registerUseAndCheckFree(ip);
-    res.status(200).json({ summary, full, slides, isFree });
+    res.status(200).json({ summary, full, slides, reja, isFree });
   } catch (e) {
     res.status(500).json({ error: 'Server xatosi' });
   }
