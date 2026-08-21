@@ -264,6 +264,7 @@ const results = {};
 const slidesData = {}; // "slayd" turi uchun tuzilgan (JSON) ma'lumotlar, PPTX yasashda ishlatiladi
 const rejaData = {};   // taqdimotning reja bandlari
 const fullRaw = {};    // xom (formatlanmagan) to'liq matn — Word hujjati shundan quriladi
+const imgQueries = {}; // slaydlar uchun rasm qidiruv iboralari (ingliz tilida)
 
 // Diqqat: prompt matni endi mijoz tomonida QURILMAYDI — buni serverga
 // (api/generate.js) ko'chirdik, chunki avvalgi usulda istalgan kishi
@@ -404,7 +405,7 @@ function downloadAsWord(rawText, meta, filename) {
   URL.revokeObjectURL(url);
 }
 
-async function downloadAsPPTX(slides, reja, fan, mavzu, daraja, filename) {
+async function downloadAsPPTX(slides, reja, images, fan, mavzu, daraja, filename) {
   // ===== JDPU shabloni (foydalanuvchi taqdimotidan aynan olingan parametrlar) =====
   const BLUE = '0066FF';      // asosiy ko'k — sarlavha paneli, titul foni
   const CYAN = '00B8FF';      // yorqin moviy — panel ostidagi chiziq, raqamlar
@@ -478,8 +479,8 @@ async function downloadAsPPTX(slides, reja, fan, mavzu, daraja, filename) {
         const d = 0.085;
         r.addShape(pres.ShapeType.ellipse, {
           x: 15.55 + a * 0.42, y: 6.90 + b * 0.42, w: d, h: d,
-          fill: { color: CYAN }, line: { type: 'none' },
-          transparency: Math.min(85, 15 + (7 - a) * 7 + (7 - b) * 5),
+          fill: { color: CYAN, transparency: Math.min(85, 15 + (7 - a) * 7 + (7 - b) * 5) },
+          line: { type: 'none' },
         });
       }
     }
@@ -504,8 +505,47 @@ async function downloadAsPPTX(slides, reja, fan, mavzu, daraja, filename) {
     }
   }
 
-  // ---------- 3) KONTENT SLAYDLARI ----------
+  // ---------- 3) BO'LIM OCHUVCHI (RASMLI) SLAYD ----------
+  // Har bir reja bandi boshida Wikimedia Commons'dan olingan rasm bilan
+  // bo'lim ochuvchi slayd chiqadi. Rasm topilmasa — oddiy ko'k bo'lim slaydi.
+  function sectionSlide(idx, titleText) {
+    const s = pres.addSlide();
+    const img = (images || [])[idx - 1];
+    s.background = { color: BLUE };
+    if (img && img.data) {
+      s.addImage({ data: img.data, x: 0, y: 0, w: W, h: H, sizing: { type: 'cover', w: W, h: H } });
+      // Matn aniq o'qilishi uchun rasm ustidan to'q qatlam
+      // Yuqori qism yengil qoraytiriladi — rasm aniq ko'rinsin
+      s.addShape(pres.ShapeType.rect, { x: 0, y: 0, w: W, h: H, fill: { color: '00214A', transparency: 66 }, line: { type: 'none' } });
+      // Pastki lenta — sarlavha o'qilishi uchun deyarli to'liq to'q
+      s.addShape(pres.ShapeType.rect, { x: 0, y: H - 4.6, w: W, h: 4.6, fill: { color: '00214A', transparency: 8 }, line: { type: 'none' } });
+    }
+    s.addText(String(idx).padStart(2, '0'), {
+      x: 1.4, y: H - 5.05, w: 4, h: 1.15,
+      fontFace: FONT, fontSize: 44, bold: true, color: CYAN, margin: 0,
+    });
+    s.addShape(pres.ShapeType.rect, { x: 1.45, y: H - 3.72, w: 1.8, h: 0.09, fill: { color: CYAN }, line: { type: 'none' } });
+    s.addText(String(titleText || ''), {
+      x: 1.4, y: H - 3.35, w: W - 3.6, h: 2.2,
+      fontFace: FONT, fontSize: 38, bold: true, color: 'FFFFFF', valign: 'top', margin: 0, lineSpacingMultiple: 1.12,
+    });
+    if (img && img.credit) {
+      // Wikimedia litsenziyasi talabi: muallif va litsenziya ko'rsatiladi
+      s.addText('Rasm: ' + img.credit, {
+        x: 1.4, y: H - 0.9, w: W - 2.8, h: 0.5,
+        fontFace: FONT, fontSize: 10, color: 'C3D8F0', margin: 0,
+      });
+    }
+  }
+
+  // ---------- 4) KONTENT SLAYDLARI ----------
+  let lastSection = null;
   (slides || []).forEach((s) => {
+    const sec = Number(s.section);
+    if (reja && sec >= 1 && reja[sec - 1] && sec !== lastSection) {
+      sectionSlide(sec, reja[sec - 1]);
+      lastSection = sec;
+    }
     const slide = pres.addSlide();
     slide.background = { color: 'FFFFFF' };
     header(slide, mavzuUpper);
@@ -568,8 +608,8 @@ async function downloadAsPPTX(slides, reja, fan, mavzu, daraja, filename) {
     x: 5.00, y: 4.30, w: 10.00, h: 2.20,
     fontFace: FONT, fontSize: 48, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle', margin: 0, lineSpacingMultiple: 1.15,
   });
-  e.addShape(pres.ShapeType.ellipse, { x: -1.10, y: 8.94, w: 3.40, h: 3.40, fill: { color: ROWBG }, transparency: 82, line: { type: 'none' } });
-  e.addShape(pres.ShapeType.ellipse, { x: 16.60, y: -1.40, w: 4.54, h: 4.54, fill: { color: CYAN }, transparency: 80, line: { type: 'none' } });
+  e.addShape(pres.ShapeType.ellipse, { x: -1.10, y: 8.94, w: 3.40, h: 3.40, fill: { color: ROWBG, transparency: 82 }, line: { type: 'none' } });
+  e.addShape(pres.ShapeType.ellipse, { x: 16.60, y: -1.40, w: 4.54, h: 4.54, fill: { color: CYAN, transparency: 80 }, line: { type: 'none' } });
 
   await pres.writeFile({ fileName: filename + '.pptx' });
 }
@@ -667,15 +707,36 @@ function showDownloadButtons(type) {
   if (pptxBtn) pptxBtn.addEventListener('click', (e) => handlePptxClick(type, e.currentTarget));
 }
 
+// Wikimedia Commons'dan bepul rasmlarni olib keladi.
+// Rasm topilmasa ham taqdimot yaratilaveradi — bu qism ixtiyoriy bezak.
+async function fetchSlideImages(type) {
+  const queries = imgQueries[type];
+  if (!Array.isArray(queries) || !queries.length) return [];
+  try {
+    const res = await fetch('/api/images', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ queries }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data.images) ? data.images : [];
+  } catch (e) {
+    return [];
+  }
+}
+
 async function handlePptxClick(type, btn) {
   const fan = (document.getElementById('fan').value || 'Fan').trim();
   const mavzu = (document.getElementById('mavzu').value || META[type].title).trim();
   const daraja = document.getElementById('daraja').value;
   const old = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = '<span class="spin spin-dark"></span> Tayyorlanmoqda...';
   try {
-    await downloadAsPPTX(slidesData[type], rejaData[type], fan, mavzu, daraja, buildFilename(type));
+    btn.innerHTML = '<span class="spin spin-dark"></span> Rasmlar izlanmoqda...';
+    const images = await fetchSlideImages(type);
+    btn.innerHTML = '<span class="spin spin-dark"></span> Taqdimot yig\'ilmoqda...';
+    await downloadAsPPTX(slidesData[type], rejaData[type], images, fan, mavzu, daraja, buildFilename(type));
   } catch (e) {
     alert("PPTX yaratishda xatolik yuz berdi. Qayta urinib ko'ring.");
   } finally {
@@ -844,6 +905,7 @@ async function generate(type) {
     fullRaw[type] = data.full || '';
     if (data.slides) slidesData[type] = data.slides;
     if (data.reja) rejaData[type] = data.reja;
+    if (data.rasmSorovlari) imgQueries[type] = data.rasmSorovlari;
     if (data.isFree) {
       results[type] = true;
       showDownloadButtons(type);
@@ -891,6 +953,7 @@ function resetAllCards() {
     delete slidesData[type];
     delete rejaData[type];
     delete fullRaw[type];
+    delete imgQueries[type];
   });
   updateTotal();
 }
