@@ -10,6 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/marked@18.0.7/lib/marked.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.14.0/dist/html2pdf.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs/dist/pptxgen.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
   /* ===== JDPU brend palitrasi (universitet gerbidan olingan) ===== */
   :root{
@@ -322,33 +323,118 @@ async function downloadAsPDF(el, filename) {
   }
 }
 
+// LaTeX formulasini KaTeX bilan chizib, PNG rasmga aylantiradi.
+// Word HTML ichida jonli formula ko'rsatib bo'lmaydi — shuning uchun rasm ishlatiladi.
+// Natijalar keshlanadi: bir xil formula qayta chizilmaydi.
+const WORD_SEAL = "data:image/png;base64,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";
+const _mathCache = new Map();
+
+async function latexToImage(tex, display) {
+  const key = (display ? 'D:' : 'I:') + tex;
+  if (_mathCache.has(key)) return _mathCache.get(key);
+
+  const holder = document.createElement('div');
+  holder.style.cssText = 'position:fixed;left:-99999px;top:0;background:#fff;padding:4px 6px;'
+    + "font-family:'Times New Roman',serif;color:#000;";
+  try {
+    holder.innerHTML = katex.renderToString(tex, {
+      displayMode: !!display, throwOnError: false,
+      // Word hujjati 14pt — formulalar ham shunga yaqin bo'lsin
+      minRuleThickness: 0.06,
+    });
+  } catch (e) {
+    return null;
+  }
+  // O'lchamni oshirib chizamiz — chop etishda aniq chiqsin
+  holder.style.fontSize = '28px';
+  document.body.appendChild(holder);
+
+  try {
+    const canvas = await html2canvas(holder, { backgroundColor: '#ffffff', scale: 2, logging: false });
+    const w = Math.round(canvas.width / 2 / 28 * 14);   // 28px -> 14pt ga qaytaramiz
+    const h = Math.round(canvas.height / 2 / 28 * 14);
+    const out = { data: canvas.toDataURL('image/png'), w, h };
+    _mathCache.set(key, out);
+    return out;
+  } catch (e) {
+    return null;
+  } finally {
+    document.body.removeChild(holder);
+  }
+}
+
+// Matndagi barcha $...$ va $$...$$ ni oldindan rasmga aylantirib, xaritaga yig'adi
+async function prerenderMath(text) {
+  const map = new Map();
+  const tasks = [];
+  const seen = new Set();
+  const add = (tex, display) => {
+    const key = (display ? 'D:' : 'I:') + tex;
+    if (seen.has(key)) return;
+    seen.add(key);
+    tasks.push(latexToImage(tex, display).then(img => { if (img) map.set(key, img); }));
+  };
+  String(text).replace(/\$\$([\s\S]+?)\$\$/g, (m, t) => { add(t.trim(), true); return m; });
+  String(text).replace(/(^|[^$])\$([^$\n]+?)\$(?!\$)/g, (m, p, t) => { add(t.trim(), false); return m; });
+  await Promise.all(tasks);
+  return map;
+}
+
 // Word hujjati ekrandagi HTML'dan emas, XOM matndan quriladi.
 // Shu sababli hujjatda rang, ramka, chiziq yoki markdown belgilari qolmaydi.
 function escapeHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-// Matn ichidagi belgilarni tozalaydi: **qalin**, LaTeX, ro'yxat chiziqchalari va h.k.
-function cleanInline(s) {
+// Matn ichidagi belgilarni tozalaydi va formulalarni rasmga almashtiradi.
+function cleanInline(s, mathMap) {
   let t = String(s);
-  t = t.replace(/\$\$([\s\S]*?)\$\$/g, '$1');   // $$...$$
-  t = t.replace(/\$([^$\n]+?)\$/g, '$1');        // $...$
+
+  // Formulalarni vaqtincha joy egallovchi belgilarga almashtiramiz
+  const slots = [];
+  t = t.replace(/\$\$([\s\S]+?)\$\$/g, (m, tex) => {
+    const img = mathMap && mathMap.get('D:' + tex.trim());
+    return '\u0000' + (slots.push(img ? imgTag(img, true) : tex.trim()) - 1) + '\u0000';
+  });
+  t = t.replace(/(^|[^$])\$([^$\n]+?)\$(?!\$)/g, (m, pre, tex) => {
+    const img = mathMap && mathMap.get('I:' + tex.trim());
+    return pre + '\u0000' + (slots.push(img ? imgTag(img, false) : tex.trim()) - 1) + '\u0000';
+  });
+
   t = t.replace(/`([^`]*)`/g, '$1');
   t = escapeHtml(t);
   t = t.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
-  t = t.replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, '$1$2'); // kursivni oddiy matnga
-  t = t.replace(/\\[a-zA-Z]+\{?|\}/g, '');       // qolgan LaTeX buyruqlari
+  t = t.replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, '$1$2');
+
+  // Formulalarni qaytarib qo'yamiz
+  t = t.replace(/\u0000(\d+)\u0000/g, (m, i) => slots[Number(i)] || '');
   return t.trim();
 }
 
-function buildWordHtml(rawText, meta) {
-  const lines = String(rawText).replace(/\r/g, '').split('\n');
+function imgTag(img, display) {
+  const style = display
+    ? 'display:block;margin:6pt auto;'
+    : 'vertical-align:middle;';
+  return '<img src="' + img.data + '" width="' + img.w + '" height="' + img.h + '" style="' + style + '" />';
+}
+
+async function buildWordHtml(rawText, meta) {
+  // Formulalarni oldindan rasmga aylantiramiz
+  const mathMap = await prerenderMath(rawText);
+
+  // Katta formulalar ($$...$$) alohida qatorga chiqarilsin — aks holda ular
+  // o'zini tanishtiruvchi jumla bilan bir abzasda qolib, tartibi buziladi.
+  const prepared = String(rawText)
+    .replace(/\r/g, '')
+    .replace(/\$\$([\s\S]+?)\$\$/g, (m, tex) => '\n\u2404' + tex.trim().replace(/\n/g, ' ') + '\u2404\n');
+
+  const lines = prepared.split('\n');
   let body = '';
   let para = [];
 
   const flush = () => {
     if (!para.length) return;
-    const txt = cleanInline(para.join(' '));
+    const txt = cleanInline(para.join(' '), mathMap);
     if (txt) body += '<p class=t>' + txt + '</p>';
     para = [];
   };
@@ -356,44 +442,65 @@ function buildWordHtml(rawText, meta) {
   for (let raw of lines) {
     const line = raw.trim();
     if (!line) { flush(); continue; }
-    if (/^-{3,}$/.test(line) || /^\|/.test(line)) { flush(); continue; } // chiziq va jadval — o'tkazib yuboriladi
+    if (/^-{3,}$/.test(line) || /^\|/.test(line)) { flush(); continue; }
+    const fml = line.match(/^\u2404([\s\S]+)\u2404$/);
+    if (fml) {
+      flush();
+      const img = mathMap && mathMap.get('D:' + fml[1].trim());
+      body += img
+        ? '<p class=fml>' + imgTag(img, false) + '</p>'
+        : '<p class=fml>' + escapeHtml(fml[1].trim()) + '</p>';
+      continue;
+    }
     const h = line.match(/^(#{1,6})\s+(.*)$/);
     if (h) {
       flush();
-      const t = cleanInline(h[2]).replace(/<\/?b>/g, '');
+      const t = cleanInline(h[2], mathMap).replace(/<\/?b>/g, '');
       if (t) body += '<p class=h>' + t + '</p>';
       continue;
     }
-    // ro'yxat belgisi olib tashlanadi, matn oddiy abzas bo'lib qoladi
     const li = line.match(/^\s*(?:[-*\u2022\u25AA]|\d+[.)])\s+(.*)$/);
-    if (li) { flush(); const t = cleanInline(li[1]); if (t) body += '<p class=t>' + t + '</p>'; continue; }
+    if (li) { flush(); const t = cleanInline(li[1], mathMap); if (t) body += '<p class=t>' + t + '</p>'; continue; }
     para.push(line);
   }
   flush();
 
-  const title = cleanInline(meta.mavzu || '').replace(/<\/?b>/g, '');
-  const sub = cleanInline([meta.fan, meta.daraja].filter(Boolean).join(' \u2014 ')).replace(/<\/?b>/g, '');
-  const head = (title ? '<p class=title>' + title + '</p>' : '')
-             + (sub ? '<p class=sub>' + sub + '</p>' : '');
+  const title = cleanInline(meta.mavzu || '', mathMap).replace(/<\/?b>/g, '');
+  const sub = cleanInline([meta.fan, meta.daraja].filter(Boolean).join(' \u2014 '), mathMap).replace(/<\/?b>/g, '');
+
+  // Universitet sarlavhasi: gerb va nom
+  const head =
+      '<table class=hdr cellpadding=0 cellspacing=0><tr>'
+    + '<td class=hc1><img src="' + WORD_SEAL + '" width="62" height="62" /></td>'
+    + '<td class=hc2>'
+    + '<p class=uni>ABDULLA QODIRIY NOMIDAGI</p>'
+    + '<p class=uni2>JIZZAX DAVLAT PEDAGOGIKA UNIVERSITETI</p>'
+    + '</td></tr></table>'
+    + (title ? '<p class=title>' + title + '</p>' : '')
+    + (sub ? '<p class=sub>' + sub + '</p>' : '');
 
   return '<html xmlns:o="urn:schemas-microsoft-com:office:office" '
     + 'xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'
     + '<head><meta charset="utf-8"><title>' + escapeHtml(meta.title || 'Hujjat') + '</title>'
     + '<style>'
-    /* O'zbekiston oliy ta'limida qabul qilingan hujjat me'yorlari:
-       A4, chap 3 sm, o'ng 1,5 sm, tepa/past 2 sm, Times New Roman 14, 1,5 interval */
     + '@page { size:21cm 29.7cm; margin:2cm 1.5cm 2cm 3cm; }'
     + 'body { font-family:"Times New Roman",serif; font-size:14pt; color:#000000; }'
     + 'p { margin:0; }'
-    + 'p.t { text-align:justify; text-indent:1.25cm; line-height:150%; margin-bottom:0pt; }'
+    + 'p.t { text-align:justify; text-indent:1.25cm; line-height:150%; }'
+    + 'p.fml { text-align:center; text-indent:0; margin:9pt 0; line-height:100%; }'
     + 'p.h { text-align:left; text-indent:0; font-weight:bold; line-height:150%; margin:14pt 0 6pt; }'
-    + 'p.title { text-align:center; text-indent:0; font-weight:bold; font-size:16pt; line-height:150%; margin-bottom:4pt; }'
-    + 'p.sub { text-align:center; text-indent:0; line-height:150%; margin-bottom:16pt; }'
+    + 'p.title { text-align:center; text-indent:0; font-weight:bold; font-size:16pt; line-height:150%; margin:10pt 0 4pt; }'
+    + 'p.sub { text-align:center; text-indent:0; line-height:150%; margin-bottom:18pt; }'
+    + 'table.hdr { width:100%; border-collapse:collapse; margin-bottom:10pt; }'
+    + 'td.hc1 { width:74pt; vertical-align:middle; }'
+    + 'td.hc2 { vertical-align:middle; }'
+    + 'p.uni { font-size:11pt; letter-spacing:1pt; text-indent:0; margin:0; }'
+    + 'p.uni2 { font-size:12.5pt; font-weight:bold; letter-spacing:.5pt; text-indent:0; margin:0; }'
     + '</style></head><body>' + head + body + '</body></html>';
 }
 
-function downloadAsWord(rawText, meta, filename) {
-  const html = buildWordHtml(rawText, meta);
+async function downloadAsWord(rawText, meta, filename) {
+  const html = await buildWordHtml(rawText, meta);
   const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -621,13 +728,17 @@ function buildExportHeader(type, fan, mavzu, daraja) {
   return `
     <table style="width:100%;background:#004FA6;border-radius:10px;margin-bottom:22px;border-collapse:collapse;" cellpadding="0" cellspacing="0">
       <tr>
-        <td style="width:74px;padding:18px 0 18px 20px;vertical-align:middle;">
-          <table style="background:#00B7FF;border-radius:50%;width:46px;height:46px;" cellpadding="0" cellspacing="0"><tr>
-            <td style="width:46px;height:46px;text-align:center;vertical-align:middle;"><img src="${icon}" width="24" height="24" style="display:inline-block;" /></td>
+        <td style="width:88px;padding:16px 0 16px 18px;vertical-align:middle;">
+          <img src="${WORD_SEAL}" width="58" height="58" style="display:block;background:#fff;border-radius:50%;" />
+        </td>
+        <td style="width:60px;padding:16px 0;vertical-align:middle;">
+          <table style="background:#00B7FF;border-radius:50%;width:44px;height:44px;" cellpadding="0" cellspacing="0"><tr>
+            <td style="width:44px;height:44px;text-align:center;vertical-align:middle;"><img src="${icon}" width="22" height="22" style="display:inline-block;" /></td>
           </tr></table>
         </td>
-        <td style="padding:16px 20px 16px 10px;vertical-align:middle;">
-          <div style="color:#9FE0FF;font-size:10.5px;font-weight:700;letter-spacing:1.5px;font-family:Calibri,Arial,sans-serif;">${META[type].title.toUpperCase()}</div>
+        <td style="padding:14px 20px 14px 4px;vertical-align:middle;">
+          <div style="color:#9FE0FF;font-size:9.5px;font-weight:700;letter-spacing:1.2px;font-family:Calibri,Arial,sans-serif;">JIZZAX DAVLAT PEDAGOGIKA UNIVERSITETI</div>
+          <div style="color:#9FE0FF;font-size:10.5px;font-weight:700;letter-spacing:1.5px;font-family:Calibri,Arial,sans-serif;margin-top:3px;">${META[type].title.toUpperCase()}</div>
           <div style="color:#ffffff;font-size:19px;font-weight:700;font-family:Georgia,serif;margin:3px 0;">${mavzu || ''}</div>
           <div style="color:#A8CDF2;font-size:11.5px;font-family:Calibri,Arial,sans-serif;">${fan || ''} &nbsp;•&nbsp; ${daraja || ''}</div>
         </td>
@@ -664,7 +775,7 @@ async function handlePdfClick(type, btn) {
   }
 }
 
-function handleWordClick(type) {
+async function handleWordClick(type, btn) {
   // Word hujjati ekrandagi ko'rinishdan emas, xom matndan quriladi —
   // shu bois unda rang, ramka yoki markdown belgilari bo'lmaydi.
   const fan = (document.getElementById('fan').value || '').trim();
@@ -672,7 +783,15 @@ function handleWordClick(type) {
   const daraja = document.getElementById('daraja').value;
   const raw = fullRaw[type];
   if (!raw) { alert("Avval materialni yarating."); return; }
-  downloadAsWord(raw, { fan, mavzu, daraja, title: META[type].title }, buildFilename(type));
+  const old = btn ? btn.innerHTML : null;
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin spin-dark"></span> Tayyorlanmoqda...'; }
+  try {
+    await downloadAsWord(raw, { fan, mavzu, daraja, title: META[type].title }, buildFilename(type));
+  } catch (e) {
+    alert("Word hujjatini yaratishda xatolik yuz berdi. Qayta urinib ko'ring.");
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = old; }
+  }
 }
 
 function showDownloadButtons(type) {
@@ -703,7 +822,7 @@ function showDownloadButtons(type) {
   const wordBtn = box.querySelector('[data-word]');
   const pptxBtn = box.querySelector('[data-pptx]');
   if (pdfBtn) pdfBtn.addEventListener('click', (e) => handlePdfClick(type, e.currentTarget));
-  if (wordBtn) wordBtn.addEventListener('click', () => handleWordClick(type));
+  if (wordBtn) wordBtn.addEventListener('click', (e) => handleWordClick(type, e.currentTarget));
   if (pptxBtn) pptxBtn.addEventListener('click', (e) => handlePptxClick(type, e.currentTarget));
 }
 
