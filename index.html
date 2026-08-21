@@ -664,7 +664,17 @@ async function generate(type) {
       errorEl.style.display = 'block';
       return;
     }
-    if (!res.ok) throw new Error('Server xatosi');
+    if (!res.ok) {
+      // Serverdan kelgan aniq sababni ko'rsatamiz — shunda nima bo'lganini bilish oson.
+      let msg = "Xatolik yuz berdi. Qayta urinib ko'ring.";
+      try {
+        const err = await res.json();
+        if (err && err.error) msg = err.error;
+      } catch (_) {}
+      errorEl.textContent = msg;
+      errorEl.style.display = 'block';
+      return;
+    }
     const data = await res.json();
     renderContent(resultEl, data.summary);
     resultEl.style.display = 'block';
