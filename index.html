@@ -266,6 +266,7 @@ const deckData = {};   // "slayd" turi uchun tuzilgan taqdimot ma'lumotlari
 const rejaData = {};   // taqdimotning reja bandlari
 const fullRaw = {};    // xom (formatlanmagan) to'liq matn — Word hujjati shundan quriladi
 const imgQueries = {}; // slaydlar uchun rasm qidiruv iboralari (ingliz tilida)
+const generatedVisuals = {};
 
 // Diqqat: prompt matni endi mijoz tomonida QURILMAYDI — buni serverga
 // (api/generate.js) ko'chirdik, chunki avvalgi usulda istalgan kishi
@@ -948,39 +949,45 @@ function showDownloadButtons(type) {
 // Wikimedia Commons'dan bepul rasmlarni olib keladi.
 // Rasm topilmasa ham taqdimot yaratilaveradi — bu qism ixtiyoriy bezak.
 async function fetchSlideImages(type) {
+  if (generatedVisuals[type]) {
+    return generatedVisuals[type];
+  }
+
   const queries = imgQueries[type];
 
   if (!Array.isArray(queries) || !queries.length) {
     return [];
   }
 
+  const fan = (document.getElementById('fan').value || '').trim();
+  const mavzu = (document.getElementById('mavzu').value || '').trim();
+
   try {
-    const fan = (document.getElementById('fan').value || '').trim();
-    const mavzu = (document.getElementById('mavzu').value || '').trim();
-
-    const enrichedQueries = queries.slice(0, 4).map(query => ({
-      query,
-      fallback: [mavzu, fan, 'education diagram'].filter(Boolean),
-    }));
-
-    const res = await fetch('/api/images', {
+    const response = await fetch('/api/ai-images', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ queries: enrichedQueries }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        mavzu,
+        fan,
+        type,
+        count: Math.min(queries.length, 3),
+      }),
     });
 
-    if (!res.ok) return [];
+    if (!response.ok) {
+      return [];
+    }
 
-    const data = await res.json();
-    return Array.isArray(data.images) ? data.images : [];
-  } catch (e) {
-    return [];
-  }
-}
-    if (!res.ok) return [];
-    const data = await res.json();
-    return Array.isArray(data.images) ? data.images : [];
-  } catch (e) {
+    const data = await response.json();
+
+    generatedVisuals[type] = Array.isArray(data.images)
+      ? data.images
+      : [];
+
+    return generatedVisuals[type];
+  } catch {
     return [];
   }
 }
@@ -1213,6 +1220,7 @@ function resetAllCards() {
     delete rejaData[type];
     delete fullRaw[type];
     delete imgQueries[type];
+    delete generatedVisuals[type];
   });
   updateTotal();
 }
