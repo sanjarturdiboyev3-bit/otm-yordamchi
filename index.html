@@ -302,21 +302,38 @@ function renderContent(el, text) {
 }
 
 async function downloadAsPDF(el, filename) {
-  // Avvalgi usul (ekrandan -9999px surilgan nusxa) html2canvas'da ko'pincha
-  // BO'SH sahifa hosil qilardi. Ishonchli usul: elementni o'z joyida vaqtincha
-  // to'liq balandlikka kengaytirib suratga olamiz, so'ng qaytaramiz.
   const prevMaxHeight = el.style.maxHeight;
   const prevOverflow = el.style.overflow;
   el.style.maxHeight = 'none';
   el.style.overflow = 'visible';
 
   try {
-    await html2pdf().from(el).set({
+    const worker = html2pdf().from(el).set({
       margin: 10,
       filename: filename + '.pdf',
       html2canvas: { scale: 2, useCORS: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    }).save();
+    }).toPdf();
+
+    const pdf = await worker.get('pdf');
+    const pageCount = pdf.internal.getNumberOfPages();
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    pdf.setFontSize(9);
+    pdf.setTextColor(90, 90, 90);
+
+    for (let page = 1; page <= pageCount; page++) {
+      pdf.setPage(page);
+      pdf.text(
+        `JDPU  |  Sahifa ${page}`,
+        pageWidth - 12,
+        pageHeight - 7,
+        { align: 'right' }
+      );
+    }
+
+    await worker.save();
   } finally {
     el.style.maxHeight = prevMaxHeight;
     el.style.overflow = prevOverflow;
@@ -419,7 +436,7 @@ function imgTag(img, display) {
   return '<img src="' + img.data + '" width="' + img.w + '" height="' + img.h + '" style="' + style + '" />';
 }
 
-async function buildWordHtml(rawText, meta) {
+async function buildWordHtml(rawText, meta, images = []) {
   // Formulalarni oldindan rasmga aylantiramiz
   const mathMap = await prerenderMath(rawText);
 
@@ -471,21 +488,25 @@ async function buildWordHtml(rawText, meta) {
 
   // Universitet sarlavhasi: gerb va nom
   const head =
-      '<table class=hdr cellpadding=0 cellspacing=0><tr>'
-    + '<td class=hc1><img src="' + WORD_SEAL + '" width="62" height="62" /></td>'
-    + '<td class=hc2>'
-    + '<p class=uni>ABDULLA QODIRIY NOMIDAGI</p>'
-    + '<p class=uni2>JIZZAX DAVLAT PEDAGOGIKA UNIVERSITETI</p>'
-    + '</td></tr></table>'
-    + (title ? '<p class=title>' + title + '</p>' : '')
-    + (sub ? '<p class=sub>' + sub + '</p>' : '');
+  const figures = images
+  .filter(im => im && im.data)
+  .slice(0, 3)
+  .map((im, i) =>
+    '<div class=figure><img src="' + im.data + '" />'
+    + '<p>Rasm ' + (i + 1) + '. '
+    + escapeHtml(im.title || 'Mavzuga oid tasvir')
+    + (im.credit ? ' — ' + escapeHtml(im.credit) : '')
+    + '</p></div>'
+  )
+  .join('');
 
   return '<html xmlns:o="urn:schemas-microsoft-com:office:office" '
     + 'xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'
     + '<head><meta charset="utf-8"><title>' + escapeHtml(meta.title || 'Hujjat') + '</title>'
     + '<style>'
-    + '@page { size:21cm 29.7cm; margin:2cm 1.5cm 2cm 3cm; }'
+    + '@page Section1 { size:21cm 29.7cm; margin:2cm 1.5cm 2cm 3cm; mso-footer:f1; }'
     + 'body { font-family:"Times New Roman",serif; font-size:14pt; color:#000000; }'
+    + 'body:before { content:""; position:fixed; z-index:-1; left:25%; top:32%; width:50%; height:36%; background:url(' + WORD_SEAL + ') center/contain no-repeat; opacity:.055; }'
     + 'p { margin:0; }'
     + 'p.t { text-align:justify; text-indent:1.25cm; line-height:150%; }'
     + 'p.fml { text-align:center; text-indent:0; margin:9pt 0; line-height:100%; }'
@@ -497,14 +518,25 @@ async function buildWordHtml(rawText, meta) {
     + 'td.hc2 { vertical-align:middle; }'
     + 'p.uni { font-size:11pt; letter-spacing:1pt; text-indent:0; margin:0; }'
     + 'p.uni2 { font-size:12.5pt; font-weight:bold; letter-spacing:.5pt; text-indent:0; margin:0; }'
-    + '</style></head><body>' + head + body + '</body></html>';
+    + 'div.figure { text-align:center; page-break-inside:avoid; margin:16pt 0; }'
+    + 'div.figure img { max-width:14cm; max-height:9cm; }'
+    + 'div.figure p { font-size:10pt; font-style:italic; text-indent:0; line-height:120%; }'
+    + 'p.footer { text-align:right; font-size:10pt; color:#555; }'
+    + 'div.Section1 { page:Section1; }'
+    + '</style></head><body>'
+    + '<div style="mso-element:footer" id="f1">'
+    + '<p class="footer">JDPU | Sahifa <span style="mso-field-code: PAGE"></span></p>'
+    + '</div>'
+    + '<div class="Section1">' + head + body + figures + '</div>'
+    + '</body></html>';
 }
 
-async function downloadAsWord(rawText, meta, filename) {
-  const html = await buildWordHtml(rawText, meta);
+async function downloadAsWord(rawText, meta, filename, images = []) {
+  const html = await buildWordHtml(rawText, meta, images);
   const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
+
   a.href = url;
   a.download = filename + '.doc';
   document.body.appendChild(a);
@@ -845,7 +877,8 @@ async function handlePdfClick(type, btn) {
   btn.disabled = true;
   btn.innerHTML = '<span class="spin spin-dark"></span> Tayyorlanmoqda...';
   try {
-    await exportWithHeader(fullEl, type, downloadAsPDF, name);
+    const images = await fetchSlideImages(type);
+await exportWithHeader(fullEl, type, downloadAsPDF, name, images);
   } catch (e) {
     alert("PDF yaratishda xatolik yuz berdi. Qayta urinib ko'ring.");
   } finally {
@@ -865,7 +898,14 @@ async function handleWordClick(type, btn) {
   const old = btn ? btn.innerHTML : null;
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin spin-dark"></span> Tayyorlanmoqda...'; }
   try {
-    await downloadAsWord(raw, { fan, mavzu, daraja, title: META[type].title }, buildFilename(type));
+    const images = await fetchSlideImages(type);
+
+await downloadAsWord(
+  raw,
+  { fan, mavzu, daraja, title: META[type].title },
+  buildFilename(type),
+  images
+);
   } catch (e) {
     alert("Word hujjatini yaratishda xatolik yuz berdi. Qayta urinib ko'ring.");
   } finally {
@@ -909,13 +949,34 @@ function showDownloadButtons(type) {
 // Rasm topilmasa ham taqdimot yaratilaveradi — bu qism ixtiyoriy bezak.
 async function fetchSlideImages(type) {
   const queries = imgQueries[type];
-  if (!Array.isArray(queries) || !queries.length) return [];
+
+  if (!Array.isArray(queries) || !queries.length) {
+    return [];
+  }
+
   try {
+    const fan = (document.getElementById('fan').value || '').trim();
+    const mavzu = (document.getElementById('mavzu').value || '').trim();
+
+    const enrichedQueries = queries.slice(0, 4).map(query => ({
+      query,
+      fallback: [mavzu, fan, 'education diagram'].filter(Boolean),
+    }));
+
     const res = await fetch('/api/images', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ queries }),
+      body: JSON.stringify({ queries: enrichedQueries }),
     });
+
+    if (!res.ok) return [];
+
+    const data = await res.json();
+    return Array.isArray(data.images) ? data.images : [];
+  } catch (e) {
+    return [];
+  }
+}
     if (!res.ok) return [];
     const data = await res.json();
     return Array.isArray(data.images) ? data.images : [];
