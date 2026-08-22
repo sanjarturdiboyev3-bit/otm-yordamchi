@@ -81,12 +81,28 @@ export default async function handler(req, res) {
     return;
   }
 
-  const list = queries.slice(0, MAX_QUERIES).map((q) => String(q || '').slice(0, 120));
+  const list = queries.slice(0, MAX_QUERIES).map((q) => {
+  if (q && typeof q === 'object') {
+    return [q.query, ...(Array.isArray(q.fallback) ? q.fallback : [])]
+      .map(v => String(v || '').trim().slice(0, 120))
+      .filter(Boolean)
+      .slice(0, 3);
+  }
+
+  return [String(q || '').trim().slice(0, 120)].filter(Boolean);
+});
 
   try {
     // Parallel izlaymiz — ketma-ket qilinsa juda sekin bo'lardi
     const results = await Promise.all(
-      list.map((q) => (q ? searchOne(q).catch(() => null) : Promise.resolve(null)))
+      list.map(async (alternatives) => {
+  for (const query of alternatives) {
+    const image = await searchOne(query).catch(() => null);
+    if (image) return image;
+  }
+
+  return null;
+})
     );
     res.status(200).json({ images: results });
   } catch (e) {
