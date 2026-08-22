@@ -11,6 +11,27 @@ const PROMPT_TEMPLATES = {
   mashq: (base) => `${base}\n\nYOZISH QOIDALARI (qat'iy amal qiling):\n- Matn ILMIY USLUBDA, akademik tilda, uzluksiz nasr ko'rinishida yozilsin — dissertatsiya matni kabi.\n- Bulletli ro'yxat, chiziqcha bilan sanash, jadval va gorizontal chiziqlar ISHLATILMASIN. Fikrlar to'liq abzaslar bilan bayon etilsin.\n- LaTeX belgilari ($, \\frac, \\begin va h.k.) ISHLATILMASIN. Formulalar oddiy matn ko'rinishida yozilsin, masalan: f(x) = 2x + 3, yoki a kvadrat + b kvadrat = c kvadrat.\n- Har bir abzas kamida 5-7 ta to'liq jumladan iborat bo'lsin.\n- Bo'lim sarlavhalari '## ' bilan boshlansin (ular hujjatda oddiy qalin sarlavhaga aylantiriladi).\n- Ta'riflar aniq, misollar batafsil ishlangan, ilmiy asoslar (qonuniyat, teorema, tamoyil, tadqiqot natijasi) ko'rsatilgan bo'lsin.\n- HAJM: TO'LIQ qism kamida 3500 so'zdan iborat bo'lsin (A4 formatda, Times New Roman 14, 1,5 interval bilan taxminan 10-12 bet). Bu majburiy talab — matnni yuzaki qisqartirmang.\n\nJavobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nMashqlar mavzusi haqida 2-3 jumlali umumiy ta'rif bering.\n\n## TO'LIQ\nAmaliy mashg'ulot uchun to'liq metodik material yozing:\n## Nazariy kirish\nMashqlarni bajarish uchun zarur nazariy asos, ishlatiladigan qoida va formulalar hamda ularning kelib chiqishi.\n## Namunaviy yechimlar\nKamida OLTITA masala. Har biri uchun: masala shartini yozing, so'ng yechimni bosqichma-bosqich bayon eting, har bir qadamda QAYSI qoida yoki teoremaga tayanilayotganini ilmiy asoslab tushuntiring, oxirida javobni va uning to'g'riligini tekshirishni ko'rsating.\n## Murakkabroq masalalar\nKamida UCHTA chuqurlashtirilgan masala to'liq yechimi va ilmiy izohi bilan.\n## Mustaqil ishlash uchun topshiriqlar\nKamida o'nta topshiriq, har biri uchun faqat javob va qisqa ko'rsatma.\n## Uslubiy tavsiyalar\nO'qituvchi uchun mashqlarni tashkil etish bo'yicha ko'rsatmalar, tipik xatolar va ularning oldini olish.\n\nBarchasi o'zbek tilida.`,
   test: (base) => `${base}\n\nYOZISH QOIDALARI (qat'iy amal qiling):\n- Matn ILMIY USLUBDA, akademik tilda, uzluksiz nasr ko'rinishida yozilsin — dissertatsiya matni kabi.\n- Bulletli ro'yxat, chiziqcha bilan sanash, jadval va gorizontal chiziqlar ISHLATILMASIN. Fikrlar to'liq abzaslar bilan bayon etilsin.\n- LaTeX belgilari ($, \\frac, \\begin va h.k.) ISHLATILMASIN. Formulalar oddiy matn ko'rinishida yozilsin, masalan: f(x) = 2x + 3, yoki a kvadrat + b kvadrat = c kvadrat.\n- Har bir abzas kamida 5-7 ta to'liq jumladan iborat bo'lsin.\n- Bo'lim sarlavhalari '## ' bilan boshlansin (ular hujjatda oddiy qalin sarlavhaga aylantiriladi).\n- Ta'riflar aniq, misollar batafsil ishlangan, ilmiy asoslar (qonuniyat, teorema, tamoyil, tadqiqot natijasi) ko'rsatilgan bo'lsin.\n- HAJM: TO'LIQ qism kamida 3500 so'zdan iborat bo'lsin (A4 formatda, Times New Roman 14, 1,5 interval bilan taxminan 10-12 bet). Bu majburiy talab — matnni yuzaki qisqartirmang.\n\nJavobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nTest mavzusi haqida qisqa umumiy ma'lumot bering.\n\n## TO'LIQ\nTo'liq nazorat materialini yozing:\n## Nazorat materialining maqsadi va tuzilishi\nTestlar qanday bilim va ko'nikmalarni tekshirishi, qiyinlik darajalari bo'yicha taqsimoti.\n## Test topshiriqlari\nKamida 40 ta ko'p tanlovli savol. Har bir savol shu tartibda yozilsin: savol raqami va matni, keyingi qatorlarda A), B), C), D) variantlari.\n## Javoblar kaliti va izohlar\nHar bir savol uchun to'g'ri javobni ko'rsating va NEGA aynan shu javob to'g'ri ekanini ilmiy asoslab, 2-3 jumlada tushuntiring; shuningdek boshqa variantlar nima uchun noto'g'ri ekanini qisqacha izohlang.\n## Baholash mezonlari\nTo'plangan ballarni baholashga aylantirish tartibi va uslubiy izoh.\n\nBarchasi o'zbek tilida.`,
 };
+const IMAGE_QUERY_INSTRUCTION = `
+
+Javobning ENG OXIRIDA alohida \`### Rasm so'rovlari\` sarlavhasini yozing va uning ostida 3 ta qisqa, inglizcha Wikimedia Commons qidiruv iborasini \`- \` bilan bering. Ular ko'rgazmali obyekt yoki jarayonni ifodalasin; rasm URLi yoki izoh yozmang.`;
+
+function extractImageQueries(full, fallback) {
+  const marker = /^###\s*Rasm so['’]rovlari\s*$/im;
+  const match = marker.exec(full);
+
+  if (!match) return { full, queries: [fallback] };
+
+  const tail = full.slice(match.index + match[0].length);
+  const queries = tail.split(/\r?\n/)
+    .map(line => line.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '').trim())
+    .filter(line => /^[\x00-\x7F]{3,120}$/.test(line))
+    .slice(0, 4);
+
+  return {
+    full: full.slice(0, match.index).trim(),
+    queries: queries.length ? queries : [fallback],
+  };
+}
 
 // Modelning javobini "## QISQACHA" va "## TO'LIQ" belgilari bo'yicha ikkiga ajratamiz.
 function splitSummaryAndFull(text) {
@@ -135,7 +156,8 @@ export default async function handler(req, res) {
   }
 
   const base = `Fan: ${fan}. Mavzu: ${mavzu}. Ta'lim darajasi: ${safeDaraja}.`;
-  const prompt = PROMPT_TEMPLATES[type](base);
+  const prompt = PROMPT_TEMPLATES[type](base)
+  + (type === 'slayd' ? '' : IMAGE_QUERY_INSTRUCTION);
 
   try {
     const requestBody = {
@@ -210,6 +232,13 @@ export default async function handler(req, res) {
     }
 
     let { summary, full } = splitSummaryAndFull(text);
+    let documentImageQueries = null;
+
+if (type !== 'slayd') {
+  const extracted = extractImageQueries(full, mavzu);
+  full = extracted.full;
+  documentImageQueries = extracted.queries;
+}
 
     // "slayd" turi uchun TO'LIQ qismi JSON bo'lishi kerak — buni
     // pptxgenjs orqali haqiqiy .pptx faylga aylantirish uchun ishlatamiz.
@@ -268,7 +297,14 @@ export default async function handler(req, res) {
     }
 
     const isFree = (DEMO_MODE || isAdmin) ? true : await registerUseAndCheckFree(ip);
-    res.status(200).json({ summary, full, deck, reja, rasmSorovlari, isFree });
+res.status(200).json({
+  summary,
+  full,
+  deck,
+  reja,
+  rasmSorovlari: rasmSorovlari || documentImageQueries,
+  isFree,
+});
   } catch (e) {
     res.status(500).json({ error: 'Server xatosi' });
   }
