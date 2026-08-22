@@ -7,7 +7,7 @@
 // "## TO'LIQ" — faqat PDF/Word yuklab olishda beriladigan to'liq, ilmiy asoslangan matn
 const PROMPT_TEMPLATES = {
   material: (base) => `${base}\n\nYOZISH QOIDALARI (qat'iy amal qiling):\n- Matn ILMIY USLUBDA, akademik tilda, uzluksiz nasr ko'rinishida yozilsin — dissertatsiya matni kabi.\n- Bulletli ro'yxat, chiziqcha bilan sanash, jadval va gorizontal chiziqlar ISHLATILMASIN. Fikrlar to'liq abzaslar bilan bayon etilsin.\n- Matematik formulalar, tenglamalar, matritsalar va ifodalar ALBATTA LaTeX ko'rinishida yozilsin: matn ichidagi kichik ifodalar uchun $...$, alohida qatorga chiqadigan katta formulalar uchun $$...$$. Masalan: $f(x) = 2x + 3$ yoki $$\\frac{a + b}{c} = \\sqrt{x^2 + y^2}$$. Kasr, ildiz, daraja, indeks, integral, yig'indi va matritsalar aynan LaTeX bilan yozilsin — oddiy matnda yozilsa ifoda buziladi.\n- LaTeX faqat formulalar uchun ishlatilsin; oddiy matn ichida $ belgisi ishlatilmasin.\n- Har bir abzas kamida 5-7 ta to'liq jumladan iborat bo'lsin.\n- Bo'lim sarlavhalari '## ' bilan boshlansin (ular hujjatda oddiy qalin sarlavhaga aylantiriladi).\n- Ta'riflar aniq, misollar batafsil ishlangan, ilmiy asoslar (qonuniyat, teorema, tamoyil, tadqiqot natijasi) ko'rsatilgan bo'lsin.\n- HAJM: TO'LIQ qism kamida 3500 so'zdan iborat bo'lsin (A4 formatda, Times New Roman 14, 1,5 interval bilan taxminan 10-12 bet). Bu majburiy talab — matnni yuzaki qisqartirmang.\n\nJavobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nMavzuning eng muhim mag'zini 3-4 ta jumlada bering.\n\n## TO'LIQ\nMavzu bo'yicha to'liq ilmiy-nazariy o'quv materialini yozing. Tuzilishi quyidagicha bo'lsin va har bir bo'lim chuqur yoritilsin:\n## Kirish\nMavzuning ilmiy va amaliy ahamiyati, o'rganilish zarurati.\n## Mavzuning nazariy asoslari\nAsosiy ta'riflar, tushunchalar, tarixiy shakllanishi, sohaga qo'shgan olimlar va ularning qarashlari.\n## Asosiy qonuniyatlar va xossalar\nTegishli qoida, teorema yoki tamoyillar hamda ularning izohi va asoslanishi.\n## Ishlangan misollar va tahlil\nKamida uchta batafsil, bosqichma-bosqich yechilgan misol yoki holat tahlili.\n## Amaliy qo'llanilishi\nMavzuning fan, texnika, ta'lim yoki kundalik hayotdagi tatbiqi.\n## Xulosa\nUmumlashtiruvchi mulohazalar.\n\nBarchasi o'zbek tilida.`,
-  slayd: (base) => `${base}\n\nJavobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nTaqdimotning 3-4 ta asosiy bo'lim nomini ro'yxat qilib bering (tafsilotsiz).\n\n## TO'LIQ\nShu yerga FAQAT JSON obyekt yozing, boshqa hech qanday matn, izoh yoki markdown belgisi qo'shmang.\n\nTuzilma quyidagicha bo'lsin:\n1) "reja" — mavzuni TO'LIQ yorituvchi 5 ta reja bandi (qisqa sarlavha ko'rinishida, mantiqiy ketma-ketlikda: umumiydan xususiyga).\n1a) "rasmSorovlari" — reja bilan bir xil tartibda va bir xil sondagi massiv. Har bir element — shu reja bandiga mos rasmni Wikimedia Commons'dan topish uchun INGLIZ TILIDAGI qidiruv iborasi (2-4 so'z, aniq va ko'rgazmali predmetni bildirsin). Masalan "Amir Temur" uchun "Amir Timur monument Samarkand", fotosintez uchun "photosynthesis leaf diagram". Mavhum tushuncha bo'lsa, unga eng yaqin ko'rinadigan predmetni tanlang.\n2) "slides" — har bir reja bandi uchun ANIQ 3 tadan slayd, ya'ni jami 15 ta slayd. Har bir slaydda "section" (reja bandi tartib raqami, 1 dan boshlanadi), "title" (shu slaydning o'z sarlavhasi), "bullets" va "key" bo'lsin.\n\n"key" — shu slaydning eng muhim mag'zi: bitta yodda qoladigan, kuchli jumla (12-20 so'z). U bulletlardagi jumlani AYNAN takrorlamasin, balki ularni umumlashtirsin.\n\nMUHIM talablar:\n- Har bir slaydda 5-6 ta bullet bo'lsin va har bir bullet TO'LIQ, mazmunli jumla bo'lsin (30-45 so'z) — quruq bir-ikki so'zli ibora emas. Slayd matni to'yingan va mazmunga boy bo'lishi shart.\n- Bulletlar nazariy jihatdan asosli bo'lsin: ta'riflar, sabab-oqibat, tasnif, muhim sana/raqamlar, olimlar nomi, formulalar yoki aniq misollar bilan to'ldirilsin.\n- Bir reja bandiga tegishli 3 ta slayd bir-birini takrorlamasin: masalan 1-slayd tushuncha va ta'rif, 2-slayd tuzilishi/tasnifi yoki mexanizmi, 3-slayd misol va amaliy ahamiyati.\n\nFormat aniq shunday bo'lsin:\n{"reja":["Birinchi reja bandi","Ikkinchi reja bandi"],"rasmSorovlari":["english search term one","english search term two"],"slides":[{"section":1,"title":"Slayd sarlavhasi","key":"Eng muhim mag'zi bitta jumlada","bullets":["to'liq jumla 1","to'liq jumla 2","to'liq jumla 3","to'liq jumla 4"]}]}\n\nBarchasi o'zbek tilida yozilsin.`,
+  slayd: (base) => `${base}\n\nJavobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nTaqdimotning 3-4 ta asosiy bo'lim nomini ro'yxat qilib bering (tafsilotsiz).\n\n## TO'LIQ\nShu yerga FAQAT JSON obyekt yozing — boshqa matn, izoh yoki markdown belgisi qo'shmang.\n\nTAQDIMOT STANDARTI (qat'iy amal qiling):\n- 6x6 QOIDASI: slaydga chiqadigan har bir punkt KO'PI BILAN 6 TA SO'Z bo'lsin. Bir slaydda ko'pi bilan 6 ta punkt.\n- Punktlar to'liq jumla emas, qisqa tezis ko'rinishida bo'lsin. Masalan: "Kuch massa va tezlanish ko'paytmasi".\n- Har bir slayd uchun "izoh" maydonida esa o'qituvchi og'zaki aytadigan TO'LIQ ilmiy tushuntirish yozilsin (150-250 so'z, uzluksiz nasr). Bu matn slaydga chiqmaydi, ma'ruzachi eslatmalariga joylanadi — shuning uchun u chuqur va asosli bo'lsin.\n- Formulalar LaTeX'da: $...$ yoki $$...$$.\n\nJSON tuzilishi aynan quyidagicha:\n{\n"kirish": {"muammo":"Motivatsion savol yoki dolzarb muammo (bir jumla)","faktlar":["qiziqarli fakt, max 6 so'z","yana bir fakt","uchinchi fakt"]},\n"reja": ["reja bandi, max 6 so'z", "..."],\n"natijalar": ["talaba nimani o'zlashtiradi, max 6 so'z", "..."],\n"interaktivSavol": "Aqliy hujum uchun ochiq savol (bir jumla)",\n"bolimlar": [{"sarlavha":"Bo'lim nomi","slaydlar":[{"sarlavha":"Slayd sarlavhasi","punktlar":["max 6 so'z","..."],"izoh":"To'liq og'zaki tushuntirish, 150-250 so'z"}]}],\n"keys": {"vaziyat":"Amaliy holat yoki muammoli vaziyat (2-3 jumla)","savollar":["muhokama savoli","..."]},\n"ekspressTest": [{"savol":"Test savoli","variantlar":["A varianti","B varianti","C varianti","D varianti"],"togri":0}],\n"xulosa": ["asosiy xulosa, max 6 so'z","...","..."],\n"topshiriqlar": ["mustaqil ta'lim vazifasi","..."],\n"rasmSorovlari": ["english image search term","..."]\n}\n\nMIQDOR TALABLARI:\n- "reja": 3-5 ta band. "natijalar": 3-4 ta. "xulosa": ANIQ 3 ta. "topshiriqlar": 2-3 ta.\n- "bolimlar": reja bandlari soniga TENG bo'lsin va ularning sarlavhalari reja bandlari bilan mos kelsin.\n- Har bir bo'limda 2-3 tadan slayd bo'lsin.\n- "ekspressTest": 4-5 ta savol. "togri" — to'g'ri variantning tartib raqami (0 dan boshlanadi).\n- "rasmSorovlari": bo'limlar soniga teng, har biri INGLIZ TILIDA 2-4 so'zli, ko'rgazmali predmetni bildiruvchi qidiruv iborasi (Wikimedia Commons uchun).\n\nBarchasi o'zbek tilida (rasmSorovlari bundan mustasno).`,
   mashq: (base) => `${base}\n\nYOZISH QOIDALARI (qat'iy amal qiling):\n- Matn ILMIY USLUBDA, akademik tilda, uzluksiz nasr ko'rinishida yozilsin — dissertatsiya matni kabi.\n- Bulletli ro'yxat, chiziqcha bilan sanash, jadval va gorizontal chiziqlar ISHLATILMASIN. Fikrlar to'liq abzaslar bilan bayon etilsin.\n- LaTeX belgilari ($, \\frac, \\begin va h.k.) ISHLATILMASIN. Formulalar oddiy matn ko'rinishida yozilsin, masalan: f(x) = 2x + 3, yoki a kvadrat + b kvadrat = c kvadrat.\n- Har bir abzas kamida 5-7 ta to'liq jumladan iborat bo'lsin.\n- Bo'lim sarlavhalari '## ' bilan boshlansin (ular hujjatda oddiy qalin sarlavhaga aylantiriladi).\n- Ta'riflar aniq, misollar batafsil ishlangan, ilmiy asoslar (qonuniyat, teorema, tamoyil, tadqiqot natijasi) ko'rsatilgan bo'lsin.\n- HAJM: TO'LIQ qism kamida 3500 so'zdan iborat bo'lsin (A4 formatda, Times New Roman 14, 1,5 interval bilan taxminan 10-12 bet). Bu majburiy talab — matnni yuzaki qisqartirmang.\n\nJavobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nMashqlar mavzusi haqida 2-3 jumlali umumiy ta'rif bering.\n\n## TO'LIQ\nAmaliy mashg'ulot uchun to'liq metodik material yozing:\n## Nazariy kirish\nMashqlarni bajarish uchun zarur nazariy asos, ishlatiladigan qoida va formulalar hamda ularning kelib chiqishi.\n## Namunaviy yechimlar\nKamida OLTITA masala. Har biri uchun: masala shartini yozing, so'ng yechimni bosqichma-bosqich bayon eting, har bir qadamda QAYSI qoida yoki teoremaga tayanilayotganini ilmiy asoslab tushuntiring, oxirida javobni va uning to'g'riligini tekshirishni ko'rsating.\n## Murakkabroq masalalar\nKamida UCHTA chuqurlashtirilgan masala to'liq yechimi va ilmiy izohi bilan.\n## Mustaqil ishlash uchun topshiriqlar\nKamida o'nta topshiriq, har biri uchun faqat javob va qisqa ko'rsatma.\n## Uslubiy tavsiyalar\nO'qituvchi uchun mashqlarni tashkil etish bo'yicha ko'rsatmalar, tipik xatolar va ularning oldini olish.\n\nBarchasi o'zbek tilida.`,
   test: (base) => `${base}\n\nYOZISH QOIDALARI (qat'iy amal qiling):\n- Matn ILMIY USLUBDA, akademik tilda, uzluksiz nasr ko'rinishida yozilsin — dissertatsiya matni kabi.\n- Bulletli ro'yxat, chiziqcha bilan sanash, jadval va gorizontal chiziqlar ISHLATILMASIN. Fikrlar to'liq abzaslar bilan bayon etilsin.\n- LaTeX belgilari ($, \\frac, \\begin va h.k.) ISHLATILMASIN. Formulalar oddiy matn ko'rinishida yozilsin, masalan: f(x) = 2x + 3, yoki a kvadrat + b kvadrat = c kvadrat.\n- Har bir abzas kamida 5-7 ta to'liq jumladan iborat bo'lsin.\n- Bo'lim sarlavhalari '## ' bilan boshlansin (ular hujjatda oddiy qalin sarlavhaga aylantiriladi).\n- Ta'riflar aniq, misollar batafsil ishlangan, ilmiy asoslar (qonuniyat, teorema, tamoyil, tadqiqot natijasi) ko'rsatilgan bo'lsin.\n- HAJM: TO'LIQ qism kamida 3500 so'zdan iborat bo'lsin (A4 formatda, Times New Roman 14, 1,5 interval bilan taxminan 10-12 bet). Bu majburiy talab — matnni yuzaki qisqartirmang.\n\nJavobingizni ANIQ ikki qismga bo'ling, har biri aynan shu sarlavha bilan boshlansin:\n\n## QISQACHA\nTest mavzusi haqida qisqa umumiy ma'lumot bering.\n\n## TO'LIQ\nTo'liq nazorat materialini yozing:\n## Nazorat materialining maqsadi va tuzilishi\nTestlar qanday bilim va ko'nikmalarni tekshirishi, qiyinlik darajalari bo'yicha taqsimoti.\n## Test topshiriqlari\nKamida 40 ta ko'p tanlovli savol. Har bir savol shu tartibda yozilsin: savol raqami va matni, keyingi qatorlarda A), B), C), D) variantlari.\n## Javoblar kaliti va izohlar\nHar bir savol uchun to'g'ri javobni ko'rsating va NEGA aynan shu javob to'g'ri ekanini ilmiy asoslab, 2-3 jumlada tushuntiring; shuningdek boshqa variantlar nima uchun noto'g'ri ekanini qisqacha izohlang.\n## Baholash mezonlari\nTo'plangan ballarni baholashga aylantirish tartibi va uslubiy izoh.\n\nBarchasi o'zbek tilida.`,
 };
@@ -213,45 +213,53 @@ export default async function handler(req, res) {
 
     // "slayd" turi uchun TO'LIQ qismi JSON bo'lishi kerak — buni
     // pptxgenjs orqali haqiqiy .pptx faylga aylantirish uchun ishlatamiz.
-    let slides = null;
+    let deck = null;
     let reja = null;
     let rasmSorovlari = null;
     if (type === 'slayd') {
       try {
         const cleaned = full.replace(/```json\s*|```/g, '').trim();
-        // Yangi format — {reja:[...], slides:[...]}; eskisi — oddiy massiv.
         const objMatch = cleaned.match(/\{[\s\S]*\}/);
-        const arrMatch = cleaned.match(/\[[\s\S]*\]/);
         if (objMatch) {
           const parsed = JSON.parse(objMatch[0]);
-          if (Array.isArray(parsed.slides)) {
-            slides = parsed.slides;
+          if (parsed && Array.isArray(parsed.bolimlar)) {
+            deck = parsed;
             reja = Array.isArray(parsed.reja) ? parsed.reja : null;
             rasmSorovlari = Array.isArray(parsed.rasmSorovlari) ? parsed.rasmSorovlari : null;
           }
         }
-        if (!slides && arrMatch) {
-          const parsed = JSON.parse(arrMatch[0]);
-          if (Array.isArray(parsed)) slides = parsed;
-        }
       } catch (e) {
-        slides = null; // model formatga rioya qilmasa, PPTX tugmasi shunchaki chiqmaydi
+        deck = null; // format buzilgan bo'lsa PPTX tugmasi chiqmaydi
       }
 
-      if (slides) {
-        if (sources.size > 0) {
-          slides.push({
-            title: 'Manbalar',
-            bullets: Array.from(sources, ([url, title]) => `${title} — ${url}`),
-          });
-        }
-        // PDF/Word uchun ham o'qish mumkin bo'lgan ko'rinishga aylantiramiz
+      if (deck) {
+        // Ekranda va PDF/Word'da o'qish uchun matn ko'rinishiga aylantiramiz
         let md = '';
-        if (reja && reja.length) {
-          md += '### Reja\n' + reja.map((r, i) => `${i + 1}. ${r}`).join('\n') + '\n\n';
+        if (deck.kirish) {
+          md += '### Kirish\n' + (deck.kirish.muammo || '') + '\n'
+             + (deck.kirish.faktlar || []).map(f => '- ' + f).join('\n') + '\n\n';
         }
-        md += slides.map((s, i) => `### Slayd ${i + 1}: ${s.title || ''}\n` + (s.bullets || []).map(b => `- ${b}`).join('\n')).join('\n\n');
+        if (reja) md += '### Reja\n' + reja.map((r, i) => `${i + 1}. ${r}`).join('\n') + '\n\n';
+        if (Array.isArray(deck.natijalar)) md += '### Kutilayotgan natijalar\n' + deck.natijalar.map(n => '- ' + n).join('\n') + '\n\n';
+        (deck.bolimlar || []).forEach((b, bi) => {
+          md += `### ${bi + 1}. ${b.sarlavha || ''}\n`;
+          (b.slaydlar || []).forEach(s => {
+            md += `**${s.sarlavha || ''}**\n`
+               + (s.punktlar || []).map(p => '- ' + p).join('\n') + '\n'
+               + (s.izoh ? s.izoh + '\n' : '') + '\n';
+          });
+        });
+        if (deck.keys) {
+          md += '### Amaliy tahlil (keys-stadi)\n' + (deck.keys.vaziyat || '') + '\n'
+             + (deck.keys.savollar || []).map(q => '- ' + q).join('\n') + '\n\n';
+        }
+        if (Array.isArray(deck.xulosa)) md += '### Xulosa\n' + deck.xulosa.map(x => '- ' + x).join('\n') + '\n\n';
+        if (Array.isArray(deck.topshiriqlar)) md += '### Mustaqil ta\'lim topshiriqlari\n' + deck.topshiriqlar.map(t => '- ' + t).join('\n') + '\n';
         full = md;
+
+        if (sources.size > 0) {
+          full += '\n### Manbalar\n' + Array.from(sources, ([url, title]) => `- ${title} — ${url}`).join('\n');
+        }
       } else if (sources.size > 0) {
         full += '\n\n---\n\n**Manbalar:**\n' + Array.from(sources, ([url, title]) => `- [${title}](${url})`).join('\n');
       }
@@ -260,7 +268,7 @@ export default async function handler(req, res) {
     }
 
     const isFree = (DEMO_MODE || isAdmin) ? true : await registerUseAndCheckFree(ip);
-    res.status(200).json({ summary, full, slides, reja, rasmSorovlari, isFree });
+    res.status(200).json({ summary, full, deck, reja, rasmSorovlari, isFree });
   } catch (e) {
     res.status(500).json({ error: 'Server xatosi' });
   }
