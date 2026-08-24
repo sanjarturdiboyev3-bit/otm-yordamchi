@@ -266,7 +266,7 @@ const deckData = {};   // "slayd" turi uchun tuzilgan taqdimot ma'lumotlari
 const rejaData = {};   // taqdimotning reja bandlari
 const fullRaw = {};    // xom (formatlanmagan) to'liq matn — Word hujjati shundan quriladi
 const imgQueries = {}; // slaydlar uchun rasm qidiruv iboralari (ingliz tilida)
-const generatedVisuals = {};
+const generatedVisuals = {}; // bir mavzu uchun bir marta yaratiladi, qayta eksportda qayta xarajat bo'lmaydi
 
 // Diqqat: prompt matni endi mijoz tomonida QURILMAYDI — buni serverga
 // (api/generate.js) ko'chirdik, chunki avvalgi usulda istalgan kishi
@@ -303,6 +303,9 @@ function renderContent(el, text) {
 }
 
 async function downloadAsPDF(el, filename) {
+  // Avvalgi usul (ekrandan -9999px surilgan nusxa) html2canvas'da ko'pincha
+  // BO'SH sahifa hosil qilardi. Ishonchli usul: elementni o'z joyida vaqtincha
+  // to'liq balandlikka kengaytirib suratga olamiz, so'ng qaytaramiz.
   const prevMaxHeight = el.style.maxHeight;
   const prevOverflow = el.style.overflow;
   el.style.maxHeight = 'none';
@@ -315,25 +318,17 @@ async function downloadAsPDF(el, filename) {
       html2canvas: { scale: 2, useCORS: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
     }).toPdf();
-
+    // Hujjat uzunligidan qat'i nazar, yakuniy PDFning har sahifasiga raqam yoziladi.
     const pdf = await worker.get('pdf');
     const pageCount = pdf.internal.getNumberOfPages();
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-
     pdf.setFontSize(9);
     pdf.setTextColor(90, 90, 90);
-
     for (let page = 1; page <= pageCount; page++) {
       pdf.setPage(page);
-      pdf.text(
-        `JDPU  |  Sahifa ${page}`,
-        pageWidth - 12,
-        pageHeight - 7,
-        { align: 'right' }
-      );
+      pdf.text(`JDPU  |  Sahifa ${page}`, pageWidth - 12, pageHeight - 7, { align: 'right' });
     }
-
     await worker.save();
   } finally {
     el.style.maxHeight = prevMaxHeight;
@@ -412,12 +407,15 @@ function cleanInline(s, mathMap) {
   // Formulalarni vaqtincha joy egallovchi belgilarga almashtiramiz
   const slots = [];
   t = t.replace(/\$\$([\s\S]+?)\$\$/g, (m, tex) => {
-    const img = mathMap && mathMap.get('D:' + tex.trim());
-    return '\u0000' + (slots.push(img ? imgTag(img, true) : tex.trim()) - 1) + '\u0000';
+    // Word HTML data-uri formulalarni ayrim Office versiyalari bloklaydi va
+    // "bog'langan rasm ko'rsatilmaydi" xatosini chiqaradi. Shu sababli formula
+    // Cambria Math uslubidagi o'qiladigan matn bo'lib eksport qilinadi.
+    const formula = presentationText(tex);
+    return '\u0000' + (slots.push('<span class="math display">' + escapeHtml(formula) + '</span>') - 1) + '\u0000';
   });
   t = t.replace(/(^|[^$])\$([^$\n]+?)\$(?!\$)/g, (m, pre, tex) => {
-    const img = mathMap && mathMap.get('I:' + tex.trim());
-    return pre + '\u0000' + (slots.push(img ? imgTag(img, false) : tex.trim()) - 1) + '\u0000';
+    const formula = presentationText(tex);
+    return pre + '\u0000' + (slots.push('<span class="math">' + escapeHtml(formula) + '</span>') - 1) + '\u0000';
   });
 
   t = t.replace(/`([^`]*)`/g, '$1');
@@ -438,8 +436,9 @@ function imgTag(img, display) {
 }
 
 async function buildWordHtml(rawText, meta, images = []) {
-  // Formulalarni oldindan rasmga aylantiramiz
-  const mathMap = await prerenderMath(rawText);
+  // Office HTML data-URI formulalarni bloklashi mumkin; formula cleanInline
+  // ichida Cambria Math matni sifatida beriladi. Shu bois rasm renderi kerak emas.
+  const mathMap = new Map();
 
   // Katta formulalar ($$...$$) alohida qatorga chiqarilsin — aks holda ular
   // o'zini tanishtiruvchi jumla bilan bir abzasda qolib, tartibi buziladi.
@@ -489,24 +488,26 @@ async function buildWordHtml(rawText, meta, images = []) {
 
   // Universitet sarlavhasi: gerb va nom
   const head =
-  const figures = images
-  .filter(im => im && im.data)
-  .slice(0, 3)
-  .map((im, i) =>
-    '<div class=figure><img src="' + im.data + '" />'
-    + '<p>Rasm ' + (i + 1) + '. '
-    + escapeHtml(im.title || 'Mavzuga oid tasvir')
-    + (im.credit ? ' — ' + escapeHtml(im.credit) : '')
-    + '</p></div>'
-  )
-  .join('');
+      '<table class=hdr cellpadding=0 cellspacing=0><tr>'
+    + '<td class=hc1><img src="' + WORD_SEAL + '" width="62" height="62" /></td>'
+    + '<td class=hc2>'
+    + '<p class=uni>ABDULLA QODIRIY NOMIDAGI</p>'
+    + '<p class=uni2>JIZZAX DAVLAT PEDAGOGIKA UNIVERSITETI</p>'
+    + '</td></tr></table>'
+    + (title ? '<p class=title>' + title + '</p>' : '')
+    + (sub ? '<p class=sub>' + sub + '</p>' : '');
+
+  const figures = images.filter(im => im && im.data).slice(0, 3).map((im, i) =>
+    '<div class=figure><img src="' + im.data + '" /><p>Rasm ' + (i + 1) + '. ' + escapeHtml(im.title || 'Mavzuga oid tasvir')
+      + (im.credit ? ' — ' + escapeHtml(im.credit) : '') + '</p></div>'
+  ).join('');
 
   return '<html xmlns:o="urn:schemas-microsoft-com:office:office" '
     + 'xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'
     + '<head><meta charset="utf-8"><title>' + escapeHtml(meta.title || 'Hujjat') + '</title>'
     + '<style>'
     + '@page Section1 { size:21cm 29.7cm; margin:2cm 1.5cm 2cm 3cm; mso-footer:f1; }'
-    + 'body { font-family:"Times New Roman",serif; font-size:14pt; color:#000000; }'
+    + 'body { font-family:"Times New Roman",serif; font-size:14pt; color:#000000; counter-reset:page; }'
     + 'body:before { content:""; position:fixed; z-index:-1; left:25%; top:32%; width:50%; height:36%; background:url(' + WORD_SEAL + ') center/contain no-repeat; opacity:.055; }'
     + 'p { margin:0; }'
     + 'p.t { text-align:justify; text-indent:1.25cm; line-height:150%; }'
@@ -519,17 +520,11 @@ async function buildWordHtml(rawText, meta, images = []) {
     + 'td.hc2 { vertical-align:middle; }'
     + 'p.uni { font-size:11pt; letter-spacing:1pt; text-indent:0; margin:0; }'
     + 'p.uni2 { font-size:12.5pt; font-weight:bold; letter-spacing:.5pt; text-indent:0; margin:0; }'
-    + 'div.figure { text-align:center; page-break-inside:avoid; margin:16pt 0; }'
-    + 'div.figure img { max-width:14cm; max-height:9cm; }'
-    + 'div.figure p { font-size:10pt; font-style:italic; text-indent:0; line-height:120%; }'
-    + 'p.footer { text-align:right; font-size:10pt; color:#555; }'
-    + 'div.Section1 { page:Section1; }'
-    + '</style></head><body>'
-    + '<div style="mso-element:footer" id="f1">'
-    + '<p class="footer">JDPU | Sahifa <span style="mso-field-code: PAGE"></span></p>'
-    + '</div>'
-    + '<div class="Section1">' + head + body + figures + '</div>'
-    + '</body></html>';
+    + 'span.math { font-family:"Cambria Math","Times New Roman",serif; font-style:italic; } span.math.display { display:block; text-align:center; margin:9pt 0; font-size:16pt; font-style:normal; }'
+    + 'div.figure { text-align:center; page-break-inside:avoid; margin:16pt 0; } div.figure img { max-width:14cm; max-height:9cm; } div.figure p { font-size:10pt; font-style:italic; text-indent:0; line-height:120%; }'
+    + 'p.footer { text-align:right; font-size:10pt; color:#555; } div.Section1 { page:Section1; }'
+    + '</style></head><body><div style="mso-element:footer" id="f1"><p class="footer">JDPU  |  Sahifa <span style="mso-field-code: PAGE"></span></p></div>'
+    + '<div class="Section1">' + head + body + figures + '</div></body></html>';
 }
 
 async function downloadAsWord(rawText, meta, filename, images = []) {
@@ -537,13 +532,39 @@ async function downloadAsWord(rawText, meta, filename, images = []) {
   const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-
   a.href = url;
   a.download = filename + '.doc';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+// PptxGenJS LaTeX/MathType obyektini nativ chizmaydi. Shuning uchun xom
+// \begin, $, \frac belgilarini slaydga chiqarmaymiz; formulani o'qiladigan
+// matematik yozuvga aylantiramiz. Word eksportida esa KaTeX rasm-rendereri ishlaydi.
+function presentationText(value) {
+  let text = String(value || '');
+  text = text.replace(/\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$/g, (_, display, inline) => display || inline || '');
+  text = text.replace(/\\begin\{(?:p|b|v|V)?matrix\}/g, '[')
+    .replace(/\\end\{(?:p|b|v|V)?matrix\}/g, ']')
+    .replace(/\\\\/g, '; ')
+    .replace(/&/g, '  ')
+    .replace(/\\det/g, 'det ')
+    .replace(/\\Delta/g, 'Δ')
+    .replace(/\\times/g, '×')
+    .replace(/\\cdot/g, '·')
+    .replace(/\\leq/g, '≤')
+    .replace(/\\geq/g, '≥')
+    .replace(/\\neq/g, '≠')
+    .replace(/\\rightarrow/g, '→')
+    .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
+    .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1)/($2)')
+    .replace(/[{}]/g, '')
+    .replace(/\\[a-zA-Z]+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return text;
 }
 
 async function downloadAsPPTX(deck, reja, images, fan, mavzu, daraja, filename) {
@@ -592,7 +613,7 @@ async function downloadAsPPTX(deck, reja, images, fan, mavzu, daraja, filename) 
   // 6x6 qoidasi: ko'pi bilan 6 punkt, har biri ko'pi bilan 6 so'z
   function sixBySix(list) {
     return (list || [])
-      .map(t => String(t).trim())
+      .map(t => presentationText(t))
       .filter(Boolean)
       .slice(0, 6)
       .map(t => t.split(/\s+/).slice(0, 6).join(' '));
@@ -690,7 +711,7 @@ async function downloadAsPPTX(deck, reja, images, fan, mavzu, daraja, filename) 
     chrome(s, mavzuUp, { num: ++n });
     s.addShape(pres.ShapeType.rect, { x: 0, y: 1.06, w: W, h: H - 1.06, fill: { color: DEEP }, line: { type: 'none' } });
     s.addText('AQLIY HUJUM', { x: 0.9, y: 1.9, w: 8, h: 0.4, fontFace: FONT, fontSize: 14, bold: true, color: CYAN, charSpacing: 2, margin: 0 });
-    s.addText(String(deck.interaktivSavol), {
+    s.addText(presentationText(deck.interaktivSavol), {
       x: 0.9, y: 2.5, w: 8.4, h: 2.6,
       fontFace: FONT, fontSize: 30, bold: true, color: 'FFFFFF', valign: 'top', margin: 0, lineSpacingMultiple: 1.15,
     });
@@ -718,7 +739,7 @@ async function downloadAsPPTX(deck, reja, images, fan, mavzu, daraja, filename) 
       x: 0.9, y: H - 2.95, w: 3, h: 0.75, fontFace: FONT, fontSize: 30, bold: true, color: CYAN, margin: 0,
     });
     sd.addShape(pres.ShapeType.rect, { x: 0.95, y: H - 2.12, w: 1.2, h: 0.06, fill: { color: CYAN }, line: { type: 'none' } });
-    sd.addText(String(b.sarlavha || ''), {
+    sd.addText(presentationText(b.sarlavha), {
       x: 0.9, y: H - 1.92, w: W - 2.4, h: 1.2,
       fontFace: FONT, fontSize: 32, bold: true, color: 'FFFFFF', valign: 'top', margin: 0,
     });
@@ -731,10 +752,10 @@ async function downloadAsPPTX(deck, reja, images, fan, mavzu, daraja, filename) 
     (b.slaydlar || []).forEach((sl, si) => {
       const s = pres.addSlide();
       chrome(s, mavzuUp, { num: ++n });
-      s.addText(`${bi + 1}. ${b.sarlavha || ''}`, {
+      s.addText(`${bi + 1}. ${presentationText(b.sarlavha)}`, {
         x: 0.6, y: 1.28, w: W - 1.2, h: 0.3, fontFace: FONT, fontSize: 13, bold: true, color: CYAN, charSpacing: 1, margin: 0,
       });
-      s.addText(String(sl.sarlavha || ''), {
+      s.addText(presentationText(sl.sarlavha), {
         x: 0.6, y: 1.62, w: W - 1.2, h: 0.7, fontFace: FONT, fontSize: 32, bold: true, color: DEEP, valign: 'middle', margin: 0,
       });
       bullets(s, sl.punktlar, { x: 0.6, y: 2.6, w: 7.1, h: 4.2 });
@@ -746,7 +767,7 @@ async function downloadAsPPTX(deck, reja, images, fan, mavzu, daraja, filename) 
       } else {
         s.addShape(pres.ShapeType.rect, { x: 8.45, y: 2.95, w: 1.1, h: 0.06, fill: { color: CYAN }, line: { type: 'none' } });
         s.addText('Asosiy g\u2018oya', { x: 8.45, y: 3.2, w: 3.9, h: 0.35, fontFace: FONT, fontSize: 13, bold: true, color: CYAN, charSpacing: 1, margin: 0 });
-        s.addText(sixBySix(sl.punktlar).slice(0, 1)[0] || String(sl.sarlavha || ''), {
+        s.addText(sixBySix(sl.punktlar).slice(0, 1)[0] || presentationText(sl.sarlavha), {
           x: 8.45, y: 3.65, w: 3.9, h: 2.6,
           fontFace: FONT, fontSize: 22, bold: true, color: DEEP, valign: 'top', margin: 0, lineSpacingMultiple: 1.2,
         });
@@ -763,7 +784,7 @@ async function downloadAsPPTX(deck, reja, images, fan, mavzu, daraja, filename) 
     slideTitle(s, 'Amaliy tahlil: keys-stadi');
     s.addShape(pres.ShapeType.roundRect, { x: 0.6, y: 2.3, w: 7.3, h: 4.4, rectRadius: 0.1, fill: { color: ROWBG }, line: { type: 'none' } });
     s.addText('VAZIYAT', { x: 0.95, y: 2.55, w: 6.6, h: 0.3, fontFace: FONT, fontSize: 13, bold: true, color: CYAN, charSpacing: 1.5, margin: 0 });
-    s.addText(String(deck.keys.vaziyat || ''), {
+    s.addText(presentationText(deck.keys.vaziyat), {
       x: 0.95, y: 2.95, w: 6.6, h: 3.5, fontFace: FONT, fontSize: 20, color: INK, valign: 'top', margin: 0, lineSpacingMultiple: 1.25,
     });
     s.addText('MUHOKAMA SAVOLLARI', { x: 8.3, y: 2.3, w: 4.4, h: 0.3, fontFace: FONT, fontSize: 13, bold: true, color: CYAN, charSpacing: 1.5, margin: 0 });
@@ -778,7 +799,7 @@ async function downloadAsPPTX(deck, reja, images, fan, mavzu, daraja, filename) 
     s.addText(`EKSPRESS-TEST \u00b7 ${qi + 1}-savol`, {
       x: 0.6, y: 1.28, w: 8, h: 0.32, fontFace: FONT, fontSize: 13, bold: true, color: CYAN, charSpacing: 1.5, margin: 0,
     });
-    s.addText(String(q.savol || ''), {
+    s.addText(presentationText(q.savol), {
       x: 0.6, y: 1.68, w: W - 1.2, h: 1.1, fontFace: FONT, fontSize: 28, bold: true, color: DEEP, valign: 'middle', margin: 0,
     });
     const opts = (q.variantlar || []).slice(0, 4);
@@ -789,7 +810,7 @@ async function downloadAsPPTX(deck, reja, images, fan, mavzu, daraja, filename) 
       s.addShape(pres.ShapeType.roundRect, { x, y, w: 6.0, h: 1.25, rectRadius: 0.08, fill: { color: ROWBG }, line: { type: 'none' } });
       s.addShape(pres.ShapeType.ellipse, { x: x + 0.28, y: y + 0.33, w: 0.6, h: 0.6, fill: { color: DEEP }, line: { type: 'none' } });
       s.addText(letters[oi], { x: x + 0.28, y: y + 0.33, w: 0.6, h: 0.6, fontFace: FONT, fontSize: 16, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle', margin: 0 });
-      s.addText(String(o), { x: x + 1.05, y, w: 4.75, h: 1.25, fontFace: FONT, fontSize: 20, color: INK, valign: 'middle', margin: 0 });
+      s.addText(presentationText(o), { x: x + 1.05, y, w: 4.75, h: 1.25, fontFace: FONT, fontSize: 20, color: INK, valign: 'middle', margin: 0 });
     });
     const idx = Number(q.togri);
     s.addNotes(`To\u2018g\u2018ri javob: ${letters[idx] || '?'} \u2014 ${opts[idx] || ''}`);
@@ -858,12 +879,18 @@ function buildExportHeader(type, fan, mavzu, daraja) {
     </table>`;
 }
 
-async function exportWithHeader(el, type, exportFn, filename) {
+async function exportWithHeader(el, type, exportFn, filename, images = []) {
   const fan = (document.getElementById('fan').value || '').trim();
   const mavzu = (document.getElementById('mavzu').value || META[type].title).trim();
   const daraja = document.getElementById('daraja').value;
   const original = el.innerHTML;
-  el.innerHTML = buildExportHeader(type, fan, mavzu, daraja) + original;
+  const figures = images.filter(im => im && im.data).slice(0, 3).map((im, i) => `
+    <figure style="page-break-inside:avoid;text-align:center;margin:22px 0;">
+      <img src="${im.data}" alt="" style="max-width:78%;max-height:350px;object-fit:contain;" />
+      <figcaption style="font:italic 10pt 'Times New Roman',serif;color:#555;margin-top:6px;">Rasm ${i + 1}. ${escapeHtml(im.title || "Mavzuga oid tasvir")}${im.credit ? ' — ' + escapeHtml(im.credit) : ''}</figcaption>
+    </figure>`).join('');
+  const watermark = `<img src="${WORD_SEAL}" alt="" aria-hidden="true" style="position:fixed;left:25%;top:34%;width:50%;opacity:.055;z-index:-1;pointer-events:none;" />`;
+  el.innerHTML = watermark + buildExportHeader(type, fan, mavzu, daraja) + original + figures;
   try {
     await exportFn(el, filename);
   } finally {
@@ -878,8 +905,10 @@ async function handlePdfClick(type, btn) {
   btn.disabled = true;
   btn.innerHTML = '<span class="spin spin-dark"></span> Tayyorlanmoqda...';
   try {
+    btn.innerHTML = '<span class="spin spin-dark"></span> Rasmlar izlanmoqda...';
     const images = await fetchSlideImages(type);
-await exportWithHeader(fullEl, type, downloadAsPDF, name, images);
+    btn.innerHTML = '<span class="spin spin-dark"></span> PDF tayyorlanmoqda...';
+    await exportWithHeader(fullEl, type, downloadAsPDF, name, images);
   } catch (e) {
     alert("PDF yaratishda xatolik yuz berdi. Qayta urinib ko'ring.");
   } finally {
@@ -899,14 +928,10 @@ async function handleWordClick(type, btn) {
   const old = btn ? btn.innerHTML : null;
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin spin-dark"></span> Tayyorlanmoqda...'; }
   try {
+    if (btn) btn.innerHTML = '<span class="spin spin-dark"></span> Rasmlar izlanmoqda...';
     const images = await fetchSlideImages(type);
-
-await downloadAsWord(
-  raw,
-  { fan, mavzu, daraja, title: META[type].title },
-  buildFilename(type),
-  images
-);
+    if (btn) btn.innerHTML = '<span class="spin spin-dark"></span> Word tayyorlanmoqda...';
+    await downloadAsWord(raw, { fan, mavzu, daraja, title: META[type].title }, buildFilename(type), images);
   } catch (e) {
     alert("Word hujjatini yaratishda xatolik yuz berdi. Qayta urinib ko'ring.");
   } finally {
@@ -948,46 +973,83 @@ function showDownloadButtons(type) {
 
 // Wikimedia Commons'dan bepul rasmlarni olib keladi.
 // Rasm topilmasa ham taqdimot yaratilaveradi — bu qism ixtiyoriy bezak.
+// SVG vizualini PNGga o'tkazamiz: PowerPoint, Word va PDF uchalasi ham
+// bitta ishonchli rasm formatini oladi.
+async function visualToPng(visual) {
+  if (!visual || !visual.data || !/^data:image\/svg\+xml/i.test(visual.data)) return visual;
+  return new Promise(resolve => {
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1600;
+      canvas.height = 900;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+      resolve({ ...visual, data: canvas.toDataURL('image/png') });
+    };
+    image.onerror = () => resolve(null);
+    image.src = visual.data;
+  });
+}
+
 async function fetchSlideImages(type) {
-  if (generatedVisuals[type]) {
-    return generatedVisuals[type];
-  }
-
+  if (generatedVisuals[type]) return generatedVisuals[type];
   const queries = imgQueries[type];
-
-  if (!Array.isArray(queries) || !queries.length) {
-    return [];
-  }
-
-  const fan = (document.getElementById('fan').value || '').trim();
-  const mavzu = (document.getElementById('mavzu').value || '').trim();
-
+  if (!Array.isArray(queries) || !queries.length) return [];
   try {
-    const response = await fetch('/api/ai-images', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        mavzu,
-        fan,
-        type,
-        count: Math.min(queries.length, 3),
-      }),
-    });
+    const fan = (document.getElementById('fan').value || '').trim();
+    const mavzu = (document.getElementById('mavzu').value || '').trim();
+    // Asosiy ibora natija bermasa, server avval mavzu/fan bo'yicha yana qidiradi.
+    const enrichedQueries = queries.slice(0, 4).map(query => ({
+      query,
+      fallback: [mavzu, fan, 'education diagram'].filter(Boolean),
+    }));
 
-    if (!response.ok) {
-      return [];
+    // Birinchi tanlov: aynan shu mavzu uchun AI yaratgan real o'quv sahnalari.
+    // API kalit serverda qoladi, rasm ma'lumoti esa PPTX/Word/PDF ga kiritiladi.
+    const aiRes = await fetch('/api/ai-images', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mavzu, fan, type, count: Math.min(queries.length, 3) }),
+    });
+    if (aiRes.ok) {
+      const aiData = await aiRes.json();
+      if (Array.isArray(aiData.images) && aiData.images.length) {
+        generatedVisuals[type] = aiData.images;
+        return generatedVisuals[type];
+      }
     }
 
-    const data = await response.json();
+    // Birinchi tanlov — mavzu asosida yaratilgan original, zamonaviy vizual.
+    // U matematik formulalar skani yoki mavzuga aloqasiz Wikimedia rasmidan ancha ishonchli.
+    const visualRes = await fetch('/api/visual', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mavzu, queries }),
+    });
+    if (visualRes.ok) {
+      const visualData = await visualRes.json();
+      const visuals = await Promise.all((visualData.visuals || []).map(visualToPng));
+      const ready = visuals.filter(Boolean);
+      if (ready.length) {
+        generatedVisuals[type] = ready;
+        return generatedVisuals[type];
+      }
+    }
 
-    generatedVisuals[type] = Array.isArray(data.images)
-      ? data.images
-      : [];
-
+    // Original vizual endpointi ishlamasa, avvalgi Wikimedia fallback saqlanadi.
+    const res = await fetch('/api/images', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ queries: enrichedQueries }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    generatedVisuals[type] = Array.isArray(data.images) ? data.images : [];
     return generatedVisuals[type];
-  } catch {
+  } catch (e) {
     return [];
   }
 }
