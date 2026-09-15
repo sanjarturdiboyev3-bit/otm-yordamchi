@@ -80,21 +80,16 @@
   }
   .form-card { padding:24px; margin:-44px 0 26px; position:relative; z-index:3; box-shadow:0 10px 30px rgba(0,45,105,0.13); }
   .form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:20px; }
-  .syllabus-panel {  margin-bottom: 20px;  padding: 18px;  border: 1px dashed #8EB8E8;  border-radius: 12px;  background: #F5F9FF;}
-  .syllabus-title {  margin: 0 0 6px;  color: var(--ink);  font-size: 15px;  font-weight: 800;}
-  .syllabus-description {  margin: 0 0 14px;  color: #52657A;  font-size: 13px;  line-height: 1.5;}
-  .syllabus-actions {  display: flex;  align-items: center;  flex-wrap: wrap;  gap: 10px;}
-  .syllabus-upload-btn {  display: inline-flex;  align-items: center;  justify-content: center;  padding: 10px 16px;  border: none;  border-radius: 9px;  background: var(--vivid);  color: #fff;  font-size: 14px;  font-weight: 700;  cursor: pointer;}
-  .syllabus-upload-btn:hover {  filter: brightness(1.1);}
-  .syllabus-upload-btn.loading {  opacity: 0.65;  cursor: wait;}
-  .syllabus-file-name {  color: #38516D;  font-size: 13px;}
-  .syllabus-status {  display: none;  margin: 12px 0 0;  padding: 10px 12px;  border-radius: 8px;  font-size: 13px;  line-height: 1.5;}
-  .syllabus-status.success {  display: block;  color: #17653A;  background: #E8F7EF;}
-  .syllabus-status.error {  display: block;  color: #A52727;  background: #FDECEC;}
   .search-toggle { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:18px; padding-top:16px; border-top:1px solid var(--line); flex-wrap:wrap; }
   .search-toggle-left { display:flex; align-items:center; gap:8px; }
   .search-toggle input[type=checkbox] { width:16px; height:16px; accent-color:var(--vivid); cursor:pointer; flex-shrink:0; }
   .search-toggle label { font-size:13px; color:var(--ink); font-weight:600; margin:0; cursor:pointer; }
+  .preset-select {
+    width:100%; margin-bottom:6px; padding:7px 10px; border:1px solid var(--line); border-radius:8px;
+    font-size:12.5px; color:var(--muted); background:#FAFBFD; cursor:pointer;
+  }
+  .preset-select:disabled { cursor:not-allowed; opacity:.6; }
+  .preset-select.has-items { color:var(--ink); background:#fff; border-color:var(--vivid); }
   .search-hint { font-size:11px; color:var(--muted); margin:4px 0 0 24px; }
   label { display:block; font-size:11px; font-weight:700; color:var(--muted); margin-bottom:5px; letter-spacing:.6px; }
   input, select { width:100%; padding:10px 12px; border-radius:9px; border:1px solid var(--line); font-family:inherit; font-size:14px; color:var(--ink); background:#fff; }
@@ -234,47 +229,20 @@
 
 <div class="wrap">
 
-<div class="card form-card">
-
-  <div class="syllabus-panel">
-    <p class="syllabus-title">📘 Fan o‘quv dasturini yuklash</p>
-
-    <p class="syllabus-description">
-      PDF yoki DOCX formatidagi o‘quv dasturini yuklang.
-      Keyingi bosqichda fan nomi va mavzular avtomatik aniqlanadi.
-    </p>
-
-    <div class="syllabus-actions">
-      <input
-        type="file"
-        id="syllabusFile"
-        accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        hidden
-      />
-
-      <button
-        type="button"
-        id="syllabusUploadBtn"
-        class="syllabus-upload-btn"
-      >
-        📎 O‘quv dasturini tanlash
-      </button>
-
-      <span id="syllabusFileName" class="syllabus-file-name">
-        Fayl tanlanmagan
-      </span>
-    </div>
-
-    <p id="syllabusStatus" class="syllabus-status"></p>
-  </div>
-
-  <div class="form-grid">
+  <div class="card form-card">
+    <div class="form-grid">
       <div>
         <label>FAN</label>
+        <select id="fanPreset" class="preset-select" disabled>
+          <option value="">— Ro'yxat yuklanmoqda... —</option>
+        </select>
         <input id="fan" value="Matematika" />
       </div>
       <div>
         <label>MAVZU</label>
+        <select id="mavzuPreset" class="preset-select" disabled>
+          <option value="">— avval fanni tanlang —</option>
+        </select>
         <input id="mavzu" placeholder="masalan: Matritsalar va amallar" />
       </div>
       <div>
@@ -1452,124 +1420,83 @@ function resetAllCards() {
   document.getElementById(id).addEventListener('input', maybeSuggestSearch);
 });
 document.getElementById('useSearch').addEventListener('change', () => { userTouchedSearchToggle = true; });
-  let uploadedSyllabus = null;
 
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
+// #14: "Fan"/"Mavzu" uchun tayyor ro'yxatdan tanlash (admin tomonidan
+// kiritilgan o'quv dasturi asosida). Eski erkin-matn kiritish usuli ATAYLAB
+// saqlab qolingan — pastdagi <input id="fan"/"mavzu"> har doim tahrirlanadi.
+// Select faqat qulaylik uchun: tanlanganda inputning qiymatini to'ldiradi.
+let curriculumData = {};
 
-    reader.onload = () => {
-      const result = String(reader.result || '');
-      const commaIndex = result.indexOf(',');
-
-      if (commaIndex === -1) {
-        reject(new Error('Faylni o‘qib bo‘lmadi.'));
-        return;
-      }
-
-      resolve(result.slice(commaIndex + 1));
-    };
-
-    reader.onerror = () => {
-      reject(new Error('Faylni o‘qishda xatolik yuz berdi.'));
-    };
-
-    reader.readAsDataURL(file);
-  });
+function escAttr(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 }
 
-async function uploadSyllabus(file) {
-  const statusEl = document.getElementById('syllabusStatus');
-  const button = document.getElementById('syllabusUploadBtn');
-  const fileNameEl = document.getElementById('syllabusFileName');
-
-  statusEl.className = 'syllabus-status';
-  statusEl.textContent = '';
-
-  const extension = file.name
-    .split('.')
-    .pop()
-    .toLowerCase();
-
-  if (!['pdf', 'docx'].includes(extension)) {
-    statusEl.className = 'syllabus-status error';
-    statusEl.textContent = 'Faqat PDF yoki DOCX fayl tanlang.';
-    return;
-  }
-
-  if (file.size > 6 * 1024 * 1024) {
-    statusEl.className = 'syllabus-status error';
-    statusEl.textContent = 'Fayl hajmi 6 MB dan oshmasligi kerak.';
-    return;
-  }
-
-  button.disabled = true;
-  button.classList.add('loading');
-  button.textContent = '⏳ O‘quv dasturi o‘qilmoqda...';
-  fileNameEl.textContent = file.name;
-
+async function loadCurriculum() {
+  const fanSel = document.getElementById('fanPreset');
   try {
-    const fileBase64 = await fileToBase64(file);
-
-    const response = await fetch('/api/parse-syllabus', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        fileName: file.name,
-        mimeType: file.type,
-        fileBase64
-      })
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data.error || 'O‘quv dasturini yuklab bo‘lmadi.'
-      );
-    }
-
-    uploadedSyllabus = {
-      fileName: data.fileName,
-      text: data.text,
-      characterCount: data.characterCount
-    };
-
-    statusEl.className = 'syllabus-status success';
-    statusEl.textContent =
-      `O‘quv dasturi muvaffaqiyatli o‘qildi. ` +
-      `${data.characterCount.toLocaleString()} ta belgi aniqlandi.`;
-  } catch (error) {
-    uploadedSyllabus = null;
-    statusEl.className = 'syllabus-status error';
-    statusEl.textContent =
-      error.message || 'Faylni yuklashda xatolik yuz berdi.';
-  } finally {
-    button.disabled = false;
-    button.classList.remove('loading');
-    button.textContent = '📎 Boshqa o‘quv dasturini tanlash';
+    const res = await fetch('/api/curriculum');
+    const data = await res.json();
+    curriculumData = data.curriculum || {};
+  } catch (e) {
+    curriculumData = {};
   }
+  const fans = Object.keys(curriculumData);
+  if (fans.length === 0) {
+    fanSel.innerHTML = '<option value="">— ro\'yxat hali kiritilmagan —</option>';
+    fanSel.disabled = true;
+    return;
+  }
+  fanSel.innerHTML = '<option value="">— Ro\'yxatdan tanlang —</option>'
+    + fans.map(f => `<option value="${escAttr(f)}">${escAttr(f)}</option>`).join('');
+  fanSel.disabled = false;
+  fanSel.classList.add('has-items');
+  // Agar joriy "fan" input qiymati ro'yxatdagi biror nomga mos kelsa,
+  // mavzular ro'yxatini ham darhol to'ldiramiz.
+  syncMavzuPresetWithFanInput();
 }
 
-const syllabusFileInput =
-  document.getElementById('syllabusFile');
-
-const syllabusUploadButton =
-  document.getElementById('syllabusUploadBtn');
-
-syllabusUploadButton.addEventListener('click', () => {
-  syllabusFileInput.click();
-});
-
-syllabusFileInput.addEventListener('change', () => {
-  const file = syllabusFileInput.files[0];
-
-  if (file) {
-    uploadSyllabus(file);
+function populateMavzuPreset(fan) {
+  const mavzuSel = document.getElementById('mavzuPreset');
+  const list = curriculumData[fan] || [];
+  if (!fan || list.length === 0) {
+    mavzuSel.innerHTML = fan
+      ? '<option value="">— bu fan uchun mavzular kiritilmagan —</option>'
+      : '<option value="">— avval fanni tanlang —</option>';
+    mavzuSel.disabled = true;
+    mavzuSel.classList.remove('has-items');
+    return;
   }
+  mavzuSel.innerHTML = '<option value="">— Ro\'yxatdan tanlang —</option>'
+    + list.map(m => `<option value="${escAttr(m)}">${escAttr(m)}</option>`).join('');
+  mavzuSel.disabled = false;
+  mavzuSel.classList.add('has-items');
+}
+
+function syncMavzuPresetWithFanInput() {
+  const val = document.getElementById('fan').value.trim();
+  const matchKey = Object.keys(curriculumData).find(f => f.toLowerCase() === val.toLowerCase());
+  populateMavzuPreset(matchKey || null);
+}
+
+document.getElementById('fanPreset').addEventListener('change', (e) => {
+  const val = e.target.value;
+  if (!val) return;
+  document.getElementById('fan').value = val;
+  populateMavzuPreset(val);
+  document.getElementById('mavzu').value = '';
+  resetAllCards();
+  maybeSuggestSearch();
 });
+document.getElementById('mavzuPreset').addEventListener('change', (e) => {
+  const val = e.target.value;
+  if (!val) return;
+  document.getElementById('mavzu').value = val;
+  resetAllCards();
+  maybeSuggestSearch();
+});
+document.getElementById('fan').addEventListener('input', syncMavzuPresetWithFanInput);
+
+loadCurriculum();
 
 render();
 checkPendingPayment();
