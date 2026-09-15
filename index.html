@@ -1452,6 +1452,124 @@ function resetAllCards() {
   document.getElementById(id).addEventListener('input', maybeSuggestSearch);
 });
 document.getElementById('useSearch').addEventListener('change', () => { userTouchedSearchToggle = true; });
+  let uploadedSyllabus = null;
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const result = String(reader.result || '');
+      const commaIndex = result.indexOf(',');
+
+      if (commaIndex === -1) {
+        reject(new Error('Faylni o‘qib bo‘lmadi.'));
+        return;
+      }
+
+      resolve(result.slice(commaIndex + 1));
+    };
+
+    reader.onerror = () => {
+      reject(new Error('Faylni o‘qishda xatolik yuz berdi.'));
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadSyllabus(file) {
+  const statusEl = document.getElementById('syllabusStatus');
+  const button = document.getElementById('syllabusUploadBtn');
+  const fileNameEl = document.getElementById('syllabusFileName');
+
+  statusEl.className = 'syllabus-status';
+  statusEl.textContent = '';
+
+  const extension = file.name
+    .split('.')
+    .pop()
+    .toLowerCase();
+
+  if (!['pdf', 'docx'].includes(extension)) {
+    statusEl.className = 'syllabus-status error';
+    statusEl.textContent = 'Faqat PDF yoki DOCX fayl tanlang.';
+    return;
+  }
+
+  if (file.size > 6 * 1024 * 1024) {
+    statusEl.className = 'syllabus-status error';
+    statusEl.textContent = 'Fayl hajmi 6 MB dan oshmasligi kerak.';
+    return;
+  }
+
+  button.disabled = true;
+  button.classList.add('loading');
+  button.textContent = '⏳ O‘quv dasturi o‘qilmoqda...';
+  fileNameEl.textContent = file.name;
+
+  try {
+    const fileBase64 = await fileToBase64(file);
+
+    const response = await fetch('/api/parse-syllabus', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        fileName: file.name,
+        mimeType: file.type,
+        fileBase64
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.error || 'O‘quv dasturini yuklab bo‘lmadi.'
+      );
+    }
+
+    uploadedSyllabus = {
+      fileName: data.fileName,
+      text: data.text,
+      characterCount: data.characterCount
+    };
+
+    statusEl.className = 'syllabus-status success';
+    statusEl.textContent =
+      `O‘quv dasturi muvaffaqiyatli o‘qildi. ` +
+      `${data.characterCount.toLocaleString()} ta belgi aniqlandi.`;
+  } catch (error) {
+    uploadedSyllabus = null;
+    statusEl.className = 'syllabus-status error';
+    statusEl.textContent =
+      error.message || 'Faylni yuklashda xatolik yuz berdi.';
+  } finally {
+    button.disabled = false;
+    button.classList.remove('loading');
+    button.textContent = '📎 Boshqa o‘quv dasturini tanlash';
+  }
+}
+
+const syllabusFileInput =
+  document.getElementById('syllabusFile');
+
+const syllabusUploadButton =
+  document.getElementById('syllabusUploadBtn');
+
+syllabusUploadButton.addEventListener('click', () => {
+  syllabusFileInput.click();
+});
+
+syllabusFileInput.addEventListener('change', () => {
+  const file = syllabusFileInput.files[0];
+
+  if (file) {
+    uploadSyllabus(file);
+  }
+});
 
 render();
 checkPendingPayment();
