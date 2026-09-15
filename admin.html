@@ -61,6 +61,45 @@
     font-size: 12.5px; color: var(--vivid); background: none; border: 1px solid var(--line);
     padding: 6px 12px; border-radius: 8px; cursor: pointer; margin-bottom: 16px;
   }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .form-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .form-row input[type="text"], .form-row select {
+    flex: 1; min-width: 140px; padding: 9px 12px; border: 1px solid var(--line);
+    border-radius: 8px; font-size: 13.5px;
+  }
+  .btn-primary {
+    padding: 9px 16px; border: none; border-radius: 8px; background: var(--vivid);
+    color: #fff; font-weight: 700; font-size: 13px; cursor: pointer; white-space: nowrap;
+  }
+  .btn-primary:disabled { opacity: .6; cursor: default; }
+  .btn-danger {
+    padding: 4px 9px; border: 1px solid var(--danger); border-radius: 6px; background: #fff;
+    color: var(--danger); font-size: 11px; font-weight: 700; cursor: pointer;
+  }
+  .section-block {
+    background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px;
+  }
+  .section-block h3 { margin: 0 0 4px; font-size: 14.5px; color: var(--deep); }
+  .section-block .hint { font-size: 12px; color: var(--muted); margin: 0 0 12px; }
+  .fan-group { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+  .fan-group-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .fan-group-head strong { font-size: 13.5px; }
+  .chip-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; background: var(--bg);
+    border: 1px solid var(--line); border-radius: 14px; padding: 4px 6px 4px 10px; font-size: 12px;
+  }
+  .chip button { border: none; background: none; color: var(--danger); cursor: pointer; font-size: 13px; line-height: 1; padding: 2px; }
+  .upload-status { font-size: 12.5px; margin-top: 8px; min-height: 16px; }
+  .upload-status.ok { color: #2E7D32; }
+  .upload-status.err { color: var(--danger); }
+  .material-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; font-size: 12.5px;
+  }
+  .material-item .meta { color: var(--muted); }
 </style>
 </head>
 <body>
@@ -82,9 +121,69 @@
   <div class="tabs">
     <div class="tab active" data-tab="suggestions">💡 Takliflar <span class="count-badge" id="cSuggestions">0</span></div>
     <div class="tab" data-tab="reports">⚠️ Xato hisobotlari <span class="count-badge" id="cReports">0</span></div>
+    <div class="tab" data-tab="curriculum">📚 Fan/Mavzular</div>
+    <div class="tab" data-tab="materials">📁 Materiallar</div>
   </div>
-  <div id="listSuggestions"></div>
-  <div id="listReports" style="display:none;"></div>
+  <div class="panel active" id="panelSuggestions">
+    <div id="listSuggestions"></div>
+  </div>
+  <div class="panel" id="panelReports">
+    <div id="listReports"></div>
+  </div>
+
+  <div class="panel" id="panelCurriculum">
+    <div class="section-block">
+      <h3>➕ Qo'lda qo'shish</h3>
+      <p class="hint">Fan nomini yozing (mavjud bo'lsa avtomatik topiladi), mavzuni ixtiyoriy kiriting.</p>
+      <div class="form-row">
+        <input type="text" id="curFanInput" placeholder="Fan nomi, masalan: Matematika" />
+        <input type="text" id="curMavzuInput" placeholder="Mavzu (ixtiyoriy)" />
+        <button class="btn-primary" id="curAddBtn">Qo'shish</button>
+      </div>
+      <div class="upload-status" id="curAddStatus"></div>
+    </div>
+
+    <div class="section-block">
+      <h3>📄 Hujjatdan avtomatik ajratish</h3>
+      <p class="hint">O'quv dasturi yoki fanlar ro'yxati hujjatini (.docx, .pdf yoki .txt) yuklang — AI undan fan va mavzularni o'zi ajratib, ro'yxatga qo'shadi.</p>
+      <div class="form-row">
+        <input type="file" id="curFileInput" accept=".docx,.pdf,.txt" />
+        <button class="btn-primary" id="curUploadBtn">Yuklash va tahlil qilish</button>
+      </div>
+      <div class="upload-status" id="curUploadStatus"></div>
+    </div>
+
+    <div class="section-block">
+      <h3>📋 Joriy ro'yxat</h3>
+      <div id="curriculumList"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panelMaterials">
+    <div class="section-block">
+      <h3>📤 Material yuklash</h3>
+      <p class="hint">Fan va mavzuni tanlang (avval "Fan/Mavzular" bo'limida qo'shilgan bo'lishi kerak), so'ng manba hujjatini (.docx, .pdf yoki .txt, 3 MB gacha) yuklang.</p>
+      <div class="form-row">
+        <select id="matFanSelect"><option value="">— Fan tanlang —</option></select>
+        <select id="matMavzuSelect" disabled><option value="">— avval fanni tanlang —</option></select>
+      </div>
+      <div class="form-row">
+        <input type="file" id="matFileInput" accept=".docx,.pdf,.txt" />
+        <button class="btn-primary" id="matUploadBtn">Yuklash</button>
+      </div>
+      <div class="upload-status" id="matUploadStatus"></div>
+    </div>
+
+    <div class="section-block">
+      <h3>📑 Tanlangan mavzu uchun materiallar</h3>
+      <div id="materialsForTopic" class="hint">Fan va mavzu tanlang.</div>
+    </div>
+
+    <div class="section-block">
+      <h3>🗂 Materiali bor barcha mavzular</h3>
+      <div id="materialsOverview" class="hint">Yuklanmoqda...</div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -155,6 +254,7 @@
       await loadData();
       document.getElementById('gate').style.display = 'none';
       document.getElementById('dash').style.display = 'block';
+      loadCurriculum();
     } catch (e) {
       errEl.textContent = "Parol noto'g'ri yoki server xatosi.";
       btn.disabled = false; btn.textContent = 'Kirish';
@@ -163,17 +263,245 @@
   document.getElementById('pwInput').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') document.getElementById('pwSubmit').click();
   });
-  document.getElementById('refreshBtn').addEventListener('click', () => loadData().catch(() => {}));
+  document.getElementById('refreshBtn').addEventListener('click', () => {
+    loadData().catch(() => {});
+    loadCurriculum();
+  });
 
   document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
       const which = tab.dataset.tab;
-      document.getElementById('listSuggestions').style.display = which === 'suggestions' ? 'block' : 'none';
-      document.getElementById('listReports').style.display = which === 'reports' ? 'block' : 'none';
+      const panelMap = { suggestions: 'panelSuggestions', reports: 'panelReports', curriculum: 'panelCurriculum', materials: 'panelMaterials' };
+      document.getElementById(panelMap[which]).classList.add('active');
+      if (which === 'materials') loadMaterialsOverview();
     });
   });
+
+  // ===================== Fan/Mavzular =====================
+  let curriculumData = {};
+
+  async function callAdminCurriculum(body) {
+    const res = await fetch('/api/admin-curriculum', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password, ...body }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Xatolik');
+    return data;
+  }
+
+  function renderCurriculumList() {
+    const el = document.getElementById('curriculumList');
+    const fans = Object.keys(curriculumData);
+    if (fans.length === 0) { el.innerHTML = '<div class="empty">Hozircha ro\'yxat bo\'sh</div>'; return; }
+    el.innerHTML = fans.map(fan => `
+      <div class="fan-group">
+        <div class="fan-group-head">
+          <strong>📚 ${esc(fan)}</strong>
+          <button class="btn-danger" onclick="removeFan('${esc(fan).replace(/'/g, "\\'")}')">Fanni o'chirish</button>
+        </div>
+        <div class="chip-list">
+          ${(curriculumData[fan] || []).map(m => `
+            <span class="chip">${esc(m)} <button onclick="removeMavzu('${esc(fan).replace(/'/g, "\\'")}', '${esc(m).replace(/'/g, "\\'")}')">&times;</button></span>
+          `).join('') || '<span class="hint">mavzular yo\'q</span>'}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function populateMaterialFanSelect() {
+    const sel = document.getElementById('matFanSelect');
+    const fans = Object.keys(curriculumData);
+    sel.innerHTML = '<option value="">— Fan tanlang —</option>' + fans.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
+  }
+
+  async function loadCurriculum() {
+    try {
+      const data = await callAdminCurriculum({ action: 'list' });
+      curriculumData = data.curriculum || {};
+      renderCurriculumList();
+      populateMaterialFanSelect();
+    } catch (e) {
+      document.getElementById('curriculumList').innerHTML = '<div class="empty">Yuklashda xatolik</div>';
+    }
+  }
+
+  document.getElementById('curAddBtn').addEventListener('click', async () => {
+    const fan = document.getElementById('curFanInput').value.trim();
+    const mavzu = document.getElementById('curMavzuInput').value.trim();
+    const statusEl = document.getElementById('curAddStatus');
+    if (!fan) { statusEl.textContent = 'Fan nomini kiriting.'; statusEl.className = 'upload-status err'; return; }
+    try {
+      const data = await callAdminCurriculum({ action: 'add', fan, mavzu });
+      curriculumData = data.curriculum;
+      renderCurriculumList();
+      populateMaterialFanSelect();
+      document.getElementById('curFanInput').value = '';
+      document.getElementById('curMavzuInput').value = '';
+      statusEl.textContent = '✅ Qo\'shildi.';
+      statusEl.className = 'upload-status ok';
+    } catch (e) {
+      statusEl.textContent = e.message;
+      statusEl.className = 'upload-status err';
+    }
+  });
+
+  async function removeMavzu(fan, mavzu) {
+    if (!confirm(`"${mavzu}" mavzusini o'chirasizmi?`)) return;
+    const data = await callAdminCurriculum({ action: 'removeMavzu', fan, mavzu });
+    curriculumData = data.curriculum;
+    renderCurriculumList();
+    populateMaterialFanSelect();
+  }
+  async function removeFan(fan) {
+    if (!confirm(`"${fan}" fanini BUTUNLAY o'chirasizmi? Barcha mavzulari ham o'chadi.`)) return;
+    const data = await callAdminCurriculum({ action: 'removeFan', fan });
+    curriculumData = data.curriculum;
+    renderCurriculumList();
+    populateMaterialFanSelect();
+  }
+
+  function readFileAsBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  document.getElementById('curUploadBtn').addEventListener('click', async () => {
+    const fileInput = document.getElementById('curFileInput');
+    const statusEl = document.getElementById('curUploadStatus');
+    const btn = document.getElementById('curUploadBtn');
+    const file = fileInput.files[0];
+    if (!file) { statusEl.textContent = 'Fayl tanlang.'; statusEl.className = 'upload-status err'; return; }
+    if (file.size > 3 * 1024 * 1024) { statusEl.textContent = "Fayl 3 MB dan katta bo'lmasin."; statusEl.className = 'upload-status err'; return; }
+    btn.disabled = true; btn.textContent = 'Tahlil qilinmoqda...';
+    statusEl.textContent = ''; statusEl.className = 'upload-status';
+    try {
+      const fileBase64 = await readFileAsBase64(file);
+      const data = await callAdminCurriculum({ action: 'parseUpload', fileBase64, filename: file.name });
+      curriculumData = data.curriculum;
+      renderCurriculumList();
+      populateMaterialFanSelect();
+      const addedCount = Object.values(data.added || {}).reduce((s, arr) => s + arr.length, 0);
+      statusEl.textContent = `✅ ${Object.keys(data.added || {}).length} ta fan, ${addedCount} ta mavzu topildi va qo'shildi.`;
+      statusEl.className = 'upload-status ok';
+      fileInput.value = '';
+    } catch (e) {
+      statusEl.textContent = e.message;
+      statusEl.className = 'upload-status err';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Yuklash va tahlil qilish';
+    }
+  });
+
+  // ===================== Materiallar =====================
+  async function callAdminMaterials(body) {
+    const res = await fetch('/api/admin-materials', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password, ...body }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Xatolik');
+    return data;
+  }
+
+  document.getElementById('matFanSelect').addEventListener('change', (e) => {
+    const fan = e.target.value;
+    const mavzuSel = document.getElementById('matMavzuSelect');
+    const list = curriculumData[fan] || [];
+    if (!fan || list.length === 0) {
+      mavzuSel.innerHTML = '<option value="">— mavzular yo\'q —</option>';
+      mavzuSel.disabled = true;
+    } else {
+      mavzuSel.innerHTML = '<option value="">— Mavzu tanlang —</option>' + list.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
+      mavzuSel.disabled = false;
+    }
+    document.getElementById('materialsForTopic').innerHTML = '<span class="hint">Mavzu tanlang.</span>';
+  });
+
+  document.getElementById('matMavzuSelect').addEventListener('change', () => loadMaterialsForTopic());
+
+  async function loadMaterialsForTopic() {
+    const fan = document.getElementById('matFanSelect').value;
+    const mavzu = document.getElementById('matMavzuSelect').value;
+    const el = document.getElementById('materialsForTopic');
+    if (!fan || !mavzu) { el.innerHTML = '<span class="hint">Fan va mavzu tanlang.</span>'; return; }
+    el.innerHTML = '<span class="hint">Yuklanmoqda...</span>';
+    try {
+      const data = await callAdminMaterials({ action: 'listForTopic', fan, mavzu });
+      const materials = data.materials || [];
+      if (materials.length === 0) { el.innerHTML = '<span class="hint">Bu mavzu uchun hali material yuklanmagan.</span>'; return; }
+      el.innerHTML = materials.map(m => `
+        <div class="material-item">
+          <span>📄 ${esc(m.filename)} <span class="meta">(${m.chars} belgi, ${esc(fmtDate(m.at))})</span></span>
+          <button class="btn-danger" onclick="deleteMaterial('${esc(fan).replace(/'/g, "\\'")}', '${esc(mavzu).replace(/'/g, "\\'")}', '${m.id}')">O'chirish</button>
+        </div>
+      `).join('');
+    } catch (e) {
+      el.innerHTML = `<span class="hint">Xatolik: ${esc(e.message)}</span>`;
+    }
+  }
+
+  async function deleteMaterial(fan, mavzu, id) {
+    if (!confirm("Bu materialni o'chirasizmi?")) return;
+    await callAdminMaterials({ action: 'delete', fan, mavzu, id });
+    loadMaterialsForTopic();
+    loadMaterialsOverview();
+  }
+
+  document.getElementById('matUploadBtn').addEventListener('click', async () => {
+    const fan = document.getElementById('matFanSelect').value;
+    const mavzu = document.getElementById('matMavzuSelect').value;
+    const fileInput = document.getElementById('matFileInput');
+    const statusEl = document.getElementById('matUploadStatus');
+    const btn = document.getElementById('matUploadBtn');
+    const file = fileInput.files[0];
+    if (!fan || !mavzu) { statusEl.textContent = 'Avval fan va mavzuni tanlang.'; statusEl.className = 'upload-status err'; return; }
+    if (!file) { statusEl.textContent = 'Fayl tanlang.'; statusEl.className = 'upload-status err'; return; }
+    if (file.size > 3 * 1024 * 1024) { statusEl.textContent = "Fayl 3 MB dan katta bo'lmasin."; statusEl.className = 'upload-status err'; return; }
+    btn.disabled = true; btn.textContent = 'Yuklanmoqda...';
+    statusEl.textContent = ''; statusEl.className = 'upload-status';
+    try {
+      const fileBase64 = await readFileAsBase64(file);
+      const data = await callAdminMaterials({ action: 'upload', fan, mavzu, fileBase64, filename: file.name });
+      statusEl.textContent = `✅ Yuklandi (${data.chars} belgi)${data.truncated ? ' — fayl uzun bo\'lgani uchun qisqartirildi' : ''}.`;
+      statusEl.className = 'upload-status ok';
+      fileInput.value = '';
+      loadMaterialsForTopic();
+      loadMaterialsOverview();
+    } catch (e) {
+      statusEl.textContent = e.message;
+      statusEl.className = 'upload-status err';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Yuklash';
+    }
+  });
+
+  async function loadMaterialsOverview() {
+    const el = document.getElementById('materialsOverview');
+    el.innerHTML = 'Yuklanmoqda...';
+    try {
+      const data = await callAdminMaterials({ action: 'listAll' });
+      const items = data.items || [];
+      if (items.length === 0) { el.innerHTML = '<span class="hint">Hozircha hech qaysi mavzuga material yuklanmagan.</span>'; return; }
+      el.innerHTML = items.map(it => `
+        <div class="material-item">
+          <span>📚 ${esc(it.fan)} → 📝 ${esc(it.mavzu)}</span>
+          <span class="meta">${it.count} ta fayl</span>
+        </div>
+      `).join('');
+    } catch (e) {
+      el.innerHTML = `<span class="hint">Xatolik: ${esc(e.message)}</span>`;
+    }
+  }
 </script>
 </body>
 </html>
