@@ -1,5 +1,9 @@
 {
   "name": "otm-yordamchi",
   "version": "1.0.0",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "mammoth": "^1.8.0",
+    "pdf-parse": "^1.1.1"
+  }
 }
