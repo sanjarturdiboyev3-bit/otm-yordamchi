@@ -61,6 +61,31 @@ function extractImageQueries(full, fallback) {
   return { full: full.slice(0, match.index).trim(), queries: queries.length ? queries : [fallback] };
 }
 
+// #15: Admin (admin.html) tomonidan aynan shu fan+mavzu uchun yuklangan
+// manba material(lar)ini o'qiydi (api/admin-materials.js shu formatda
+// saqlaydi). Material topilmasa null qaytaradi — bu holatda generatsiya
+// avvalgidek umumiy bilim asosida davom etadi.
+async function getMaterialContext(fan, mavzu) {
+  if (!UPSTASH_URL || !UPSTASH_TOKEN) return null;
+  try {
+    const key = `material:${fan}||${mavzu}`;
+    const r = await fetch(`${UPSTASH_URL}/get/${encodeURIComponent(key)}`, {
+      headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
+    });
+    const data = await r.json();
+    if (!data || !data.result) return null;
+    const arr = JSON.parse(data.result);
+    if (!Array.isArray(arr) || arr.length === 0) return null;
+    // Bir nechta fayl yuklangan bo'lsa, hammasini birlashtiramiz, lekin
+    // umumiy hajmni cheklaymiz — promptning haddan tashqari uzun bo'lib
+    // ketishining oldini olish uchun.
+    const combined = arr.map((m) => m.text || '').filter(Boolean).join('\n\n---\n\n').slice(0, 12000);
+    return combined || null;
+  } catch (e) {
+    return null;
+  }
+}
+
 // #2: "slayd" javobini JSON'ga aylantirishga urinadi; muvaffaqiyatsiz bo'lsa
 // null qaytaradi. Alohida funksiyaga chiqarilgan — shunda birinchi urinish va
 // qayta-urinish (retry) bir xil tekshiruv mantig'idan foydalanadi.
@@ -382,13 +407,21 @@ export default async function handler(req, res) {
     return;
   }
 
-  const base = `Fan: ${fan}. Mavzu: ${mavzu}. Ta'lim darajasi: ${safeDaraja}.`;
+  // #15: Agar admin aynan shu fan+mavzu uchun manba material yuklagan bo'lsa
+  // (admin.html orqali), uni asosiy manba sifatida promptga qo'shamiz —
+  // shunda AI tasodifiy umumiy bilimga emas, sizning dasturingiz/kitobingizga
+  // tayanadi.
+  const materialContext = await getMaterialContext(fan, mavzu);
+
+  const base = materialContext
+    ? `Fan: ${fan}. Mavzu: ${mavzu}. Ta'lim darajasi: ${safeDaraja}.\n\nQUYIDA O'QITUVCHI TOMONIDAN YUKLANGAN RASMIY MANBA MATERIALI BERILGAN. Materialni tuzishda ASOSIY MANBA sifatida shu matnga tayaning — undagi atamalar, ta'riflar, misollar, formulalar va tuzilishga imkon qadar mos keling. Agar manbada yetarli bo'lmasa, umumiy ilmiy bilim bilan to'ldiring, lekin manbaga zid ma'lumot bermang.\n\n"""\n${materialContext}\n"""\n`
+    : `Fan: ${fan}. Mavzu: ${mavzu}. Ta'lim darajasi: ${safeDaraja}.`;
   const prompt = PROMPT_TEMPLATES[type](base) + (type === 'slayd' ? '' : IMAGE_QUERY_INSTRUCTION);
 
-  // 4) #12 Kesh: useSearch=false bo'lgan so'rovlar uchun avval keshni tekshiramiz.
-  //    Aynan bir xil fan/mavzu/daraja/tur so'ralganda, avvalgi (allaqachon
-  //    yaratilgan) natija qaytariladi — sifat barqarorlashadi, xarajat tushadi.
-  const cacheKey = !useSearch ? cacheKeyFor(type, fan, mavzu, safeDaraja) : null;
+  // 4) #12 Kesh: useSearch=false VA material asosida bo'lmagan so'rovlar
+  //    uchun avval keshni tekshiramiz. Material mavjud bo'lsa keshlamaymiz —
+  //    admin materialni yangilasa, natija darhol yangilanishi kerak.
+  const cacheKey = (!useSearch && !materialContext) ? cacheKeyFor(type, fan, mavzu, safeDaraja) : null;
   if (cacheKey) {
     const cached = await getCache(cacheKey);
     if (cached) {
