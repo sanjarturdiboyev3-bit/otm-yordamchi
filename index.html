@@ -80,7 +80,8 @@
   }
   .form-card { padding:24px; margin:-44px 0 26px; position:relative; z-index:3; box-shadow:0 10px 30px rgba(0,45,105,0.13); }
   .form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:20px; }
-  .search-toggle { display:flex; align-items:center; gap:8px; margin-top:18px; padding-top:16px; border-top:1px solid var(--line); }
+  .search-toggle { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:18px; padding-top:16px; border-top:1px solid var(--line); flex-wrap:wrap; }
+  .search-toggle-left { display:flex; align-items:center; gap:8px; }
   .search-toggle input[type=checkbox] { width:16px; height:16px; accent-color:var(--vivid); cursor:pointer; flex-shrink:0; }
   .search-toggle label { font-size:13px; color:var(--ink); font-weight:600; margin:0; cursor:pointer; }
   .search-hint { font-size:11px; color:var(--muted); margin:4px 0 0 24px; }
@@ -108,11 +109,15 @@
   .search-hint.suggest { color:var(--vivid); font-weight:700; }
 
   .feedback-open-btn {
-    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.3);
-    color: #fff; font-size: 12.5px; font-weight: 700; padding: 6px 14px;
-    border-radius: 20px; cursor: pointer;
+    background: #fff; border: 1px solid var(--vivid); color: var(--vivid);
+    font-size: 12.5px; font-weight: 700; padding: 6px 14px;
+    border-radius: 20px; cursor: pointer; white-space: nowrap; flex-shrink: 0;
   }
-  .feedback-open-btn:hover { background: rgba(255,255,255,.22); }
+  .feedback-open-btn:hover { background: #EAF1FF; }
+  .feedback-open-btn.footer-variant {
+    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.3); color: #fff;
+  }
+  .feedback-open-btn.footer-variant:hover { background: rgba(255,255,255,.22); }
   .feedback-overlay {
     display: none; position: fixed; inset: 0; background: rgba(15,25,50,.55);
     z-index: 999; align-items: center; justify-content: center; padding: 16px;
@@ -238,8 +243,11 @@
       </div>
     </div>
     <div class="search-toggle">
-      <input type="checkbox" id="useSearch" />
-      <label for="useSearch">🌐 Internetdan qo'shimcha/joriy ma'lumotlar bilan boyitish</label>
+      <div class="search-toggle-left">
+        <input type="checkbox" id="useSearch" />
+        <label for="useSearch">🌐 Internetdan qo'shimcha/joriy ma'lumotlar bilan boyitish</label>
+      </div>
+      <button id="openFeedbackBtn" type="button" class="feedback-open-btn">💡 Taklif bering</button>
     </div>
     <p class="search-hint" id="searchHint">Standart holatda o'chiq — tezroq va arzonroq. Joriy voqealar yoki statistik ma'lumot kerak bo'lgan mavzular uchun yoqing.</p>
   </div>
@@ -1451,7 +1459,6 @@ checkPendingPayment();
   <div class="footer-bar">
     <div class="footer-bar-inner">
       <span>O'qituvchi Yordamchisi — sun'iy intellekt asosidagi dars materiallari tizimi</span>
-      <button id="openFeedbackBtn" type="button" class="feedback-open-btn">💡 Taklif bering</button>
       <span>&copy; 2026 Jizzax davlat pedagogika universiteti</span>
     </div>
   </div>
