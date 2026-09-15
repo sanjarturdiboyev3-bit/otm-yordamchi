@@ -235,6 +235,41 @@
 <div class="wrap">
 
   <div class="card form-card">
+    <div class="card form-card">
+
+  <div class="syllabus-panel">
+    <p class="syllabus-title">📘 Fan o‘quv dasturini yuklash</p>
+
+    <p class="syllabus-description">
+      PDF yoki DOCX formatidagi o‘quv dasturini yuklang.
+      Keyingi bosqichda fan nomi va mavzular avtomatik aniqlanadi.
+    </p>
+
+    <div class="syllabus-actions">
+      <input
+        type="file"
+        id="syllabusFile"
+        accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        hidden
+      />
+
+      <button
+        type="button"
+        id="syllabusUploadBtn"
+        class="syllabus-upload-btn"
+      >
+        📎 O‘quv dasturini tanlash
+      </button>
+
+      <span id="syllabusFileName" class="syllabus-file-name">
+        Fayl tanlanmagan
+      </span>
+    </div>
+
+    <p id="syllabusStatus" class="syllabus-status"></p>
+  </div>
+
+  <div class="form-grid">
     <div class="form-grid">
       <div>
         <label>FAN</label>
