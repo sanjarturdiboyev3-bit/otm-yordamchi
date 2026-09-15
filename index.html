@@ -103,6 +103,42 @@
   button.generate:hover { filter:brightness(1.12); }
   button.generate:disabled { background:#C9D8EC; color:#fff; cursor:not-allowed; }
   .error-text { color:#B23A3A; font-size:12px; margin-top:8px; }
+  .report-btn { display:none; margin-top:10px; padding:6px 10px; border-radius:8px; border:1px solid var(--line); background:#fff; color:#B23A3A; font-size:11.5px; font-weight:700; cursor:pointer; }
+  .report-btn:hover { background:#FBEEEE; }
+  .search-hint.suggest { color:var(--vivid); font-weight:700; }
+
+  .feedback-open-btn {
+    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.3);
+    color: #fff; font-size: 12.5px; font-weight: 700; padding: 6px 14px;
+    border-radius: 20px; cursor: pointer;
+  }
+  .feedback-open-btn:hover { background: rgba(255,255,255,.22); }
+  .feedback-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(15,25,50,.55);
+    z-index: 999; align-items: center; justify-content: center; padding: 16px;
+  }
+  .feedback-modal {
+    background: #fff; border-radius: 16px; padding: 26px; max-width: 420px;
+    width: 100%; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,.25);
+  }
+  .feedback-modal h3 { margin: 0 0 6px; font-size: 17px; color: var(--deep); }
+  .feedback-sub { font-size: 12.5px; color: var(--muted); margin: 0 0 14px; line-height: 1.5; }
+  .feedback-modal textarea, .feedback-modal input[type="text"] {
+    width: 100%; border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 12px; font-size: 13.5px; font-family: inherit; margin-bottom: 10px; resize: vertical;
+  }
+  .feedback-submit {
+    width: 100%; padding: 11px; border: none; border-radius: 10px;
+    background: var(--vivid); color: #fff; font-weight: 700; font-size: 14px; cursor: pointer;
+  }
+  .feedback-submit:disabled { opacity: .6; cursor: default; }
+  .feedback-close {
+    position: absolute; top: 12px; right: 14px; background: none; border: none;
+    font-size: 22px; line-height: 1; color: var(--muted); cursor: pointer;
+  }
+  .feedback-status { font-size: 12.5px; margin: 8px 0 0; min-height: 16px; }
+  .feedback-status.ok { color: #2E7D32; }
+  .feedback-status.err { color: #B23A3A; }
   .result-box { margin-top:16px; padding:14px 16px; border-radius:10px; background:var(--tint); border:1px solid var(--line); font-size:13px; line-height:1.65; max-height:260px; overflow-y:auto; overflow-x:hidden; }
   .summary-hint { font-size:11px; color:var(--muted); margin:6px 0 0; font-style:italic; }
   .full-content { max-height:0; overflow:hidden; }
@@ -205,7 +241,7 @@
       <input type="checkbox" id="useSearch" />
       <label for="useSearch">🌐 Internetdan qo'shimcha/joriy ma'lumotlar bilan boyitish</label>
     </div>
-    <p class="search-hint">Standart holatda o'chiq — tezroq va arzonroq. Joriy voqealar yoki statistik ma'lumot kerak bo'lgan mavzular uchun yoqing.</p>
+    <p class="search-hint" id="searchHint">Standart holatda o'chiq — tezroq va arzonroq. Joriy voqealar yoki statistik ma'lumot kerak bo'lgan mavzular uchun yoqing.</p>
   </div>
 
   <div class="section-head">
@@ -1165,6 +1201,7 @@ function render() {
         <p class="summary-hint" data-hint="${type}" style="display:none;">${type === 'slayd' ? "To'liq taqdimot — reja va 15 ta slayd — PowerPoint faylida yuklab olinadi." : "To'liq, batafsil va ilmiy asoslangan versiya PDF/Word formatida yuklab olinadi."}</p>
         <div class="full-content" data-full="${type}"></div>
         <div class="actions-row" data-actions="${type}" style="display:none;"></div>
+        <button class="report-btn" type="button" data-report="${type}">⚠️ Bu materialda xato bor</button>
       </div>
     `;
     cardsEl.appendChild(card);
@@ -1173,6 +1210,63 @@ function render() {
   document.querySelectorAll('button.generate').forEach(btn => {
     btn.addEventListener('click', () => generate(btn.dataset.type));
   });
+  document.querySelectorAll('button.report-btn').forEach(btn => {
+    btn.addEventListener('click', () => reportIssue(btn.dataset.report));
+  });
+}
+
+// #10: Foydalanuvchi materialda xato (noto'g'ri formula, sana, javob va h.k.)
+// topsa, buni bir tugma bosish bilan bildirishi mumkin. Bu xabarlar
+// serverda (Upstash) yig'iladi va promptlarni yaxshilash uchun ishlatiladi.
+async function reportIssue(type) {
+  const fan = (document.getElementById('fan').value || 'Fan').trim();
+  const mavzu = document.getElementById('mavzu').value.trim();
+  const daraja = document.getElementById('daraja').value;
+  const comment = window.prompt("Qanday xato bor? (formula, sana, javob va h.k.) Ixtiyoriy izoh qoldirishingiz mumkin:", '');
+  if (comment === null) return; // foydalanuvchi bekor qildi
+
+  const btn = document.querySelector(`[data-report="${type}"]`);
+  const originalText = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Yuborilmoqda...'; }
+  try {
+    await fetch('/api/report-issue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, fan, mavzu, daraja, comment }),
+    });
+    if (btn) { btn.textContent = '✅ Rahmat, qabul qilindi'; }
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = originalText; }
+  }
+}
+
+// #3: Fan/mavzu matnida "joriy ma'lumot" talab qiladigan kalit so'zlar
+// bo'lsa, "Internetdan boyitish" belgisini avtomatik yoqamiz (foydalanuvchi
+// istasa o'chirib qo'yishi mumkin) va bu haqda qisqa izoh ko'rsatamiz.
+// Standart holatda o'chiq qoldirish tezlik/narx uchun asosli, lekin bunday
+// mavzularda aniqlik narxdan muhimroq.
+const SEARCH_SUGGEST_KEYWORDS = [
+  'tarix', 'joriy', 'hozirgi', 'so\u2019nggi', 'songgi', 'statistika', 'statistik',
+  'iqtisod', 'aholi', 'yil', 'davlat', 'siyosat', 'qonun', 'bozor', 'inflyatsiya',
+  'reyting', 'so\u2019rov', 'sorov', 'trend',
+];
+let userTouchedSearchToggle = false;
+function maybeSuggestSearch() {
+  if (userTouchedSearchToggle) return; // foydalanuvchi o'zi qo'lda o'zgartirgan bo'lsa, tegmaymiz
+  const fan = (document.getElementById('fan').value || '').toLowerCase();
+  const mavzu = (document.getElementById('mavzu').value || '').toLowerCase();
+  const combined = fan + ' ' + mavzu;
+  const matched = SEARCH_SUGGEST_KEYWORDS.some(k => combined.includes(k));
+  const checkbox = document.getElementById('useSearch');
+  const hint = document.getElementById('searchHint');
+  if (matched) {
+    checkbox.checked = true;
+    hint.textContent = "Mavzu joriy/statistik ma'lumot talab qilishi mumkin bo'lgani uchun avtomatik yoqildi — xohlasangiz o'chirib qo'yishingiz mumkin.";
+    hint.classList.add('suggest');
+  } else {
+    hint.classList.remove('suggest');
+    hint.textContent = "Standart holatda o'chiq — tezroq va arzonroq. Joriy voqealar yoki statistik ma'lumot kerak bo'lgan mavzular uchun yoqing.";
+  }
 }
 
 function buildFilename(type) {
@@ -1230,10 +1324,19 @@ async function generate(type) {
     const fullEl = document.querySelector(`[data-full="${type}"]`);
     renderContent(fullEl, data.full);
     document.querySelector(`[data-hint="${type}"]`).style.display = 'block';
+    const reportBtn = document.querySelector(`[data-report="${type}"]`);
+    if (reportBtn) reportBtn.style.display = 'inline-block';
     fullRaw[type] = data.full || '';
     if (data.deck) deckData[type] = data.deck;
     if (data.reja) rejaData[type] = data.reja;
     if (data.rasmSorovlari) imgQueries[type] = data.rasmSorovlari;
+    // #2: Model "slayd" uchun yaroqli JSON qaytara olmagan bo'lsa (ikki
+    // urinishdan keyin ham), buni foydalanuvchiga aniq aytamiz — avval bu
+    // holatda PPTX tugmasi shunchaki jim tarzda yo'qolib qolardi.
+    if (data.deckError) {
+      errorEl.textContent = "Taqdimot tuzilishini yaratishda muammo yuz berdi (format xatosi). Iltimos, \u201c\u2728 Yaratish\u201d tugmasini qayta bosib ko'ring — matn qismi yuqorida ko'rinadi, lekin PowerPoint hozircha tayyor emas.";
+      errorEl.style.display = 'block';
+    }
     if (data.isFree) {
       results[type] = true;
       showDownloadButtons(type);
@@ -1277,6 +1380,8 @@ function resetAllCards() {
     if (errorEl) { errorEl.style.display = 'none'; }
     if (hintEl) { hintEl.style.display = 'none'; }
     if (fullEl) { fullEl.innerHTML = ''; }
+    const reportEl = document.querySelector(`[data-report="${type}"]`);
+    if (reportEl) { reportEl.style.display = 'none'; reportEl.disabled = false; reportEl.textContent = '⚠️ Bu materialda xato bor'; }
     delete results[type];
     delete deckData[type];
     delete rejaData[type];
@@ -1291,6 +1396,10 @@ function resetAllCards() {
   document.getElementById(id).addEventListener('input', resetAllCards);
   document.getElementById(id).addEventListener('change', resetAllCards);
 });
+['fan', 'mavzu'].forEach(id => {
+  document.getElementById(id).addEventListener('input', maybeSuggestSearch);
+});
+document.getElementById('useSearch').addEventListener('change', () => { userTouchedSearchToggle = true; });
 
 render();
 checkPendingPayment();
@@ -1342,9 +1451,72 @@ checkPendingPayment();
   <div class="footer-bar">
     <div class="footer-bar-inner">
       <span>O'qituvchi Yordamchisi — sun'iy intellekt asosidagi dars materiallari tizimi</span>
+      <button id="openFeedbackBtn" type="button" class="feedback-open-btn">💡 Taklif bering</button>
       <span>&copy; 2026 Jizzax davlat pedagogika universiteti</span>
     </div>
   </div>
 </footer>
+
+<div id="feedbackOverlay" class="feedback-overlay" style="display:none;">
+  <div class="feedback-modal">
+    <button id="closeFeedbackBtn" type="button" class="feedback-close" aria-label="Yopish">&times;</button>
+    <h3>💡 Taklif va tavsiya</h3>
+    <p class="feedback-sub">Platformani yaxshilash bo'yicha fikringiz bizga muhim — yangi funksiya g'oyasi, noqulaylik yoki umuman istalgan mulohaza.</p>
+    <textarea id="feedbackText" rows="5" placeholder="Fikringizni shu yerga yozing..."></textarea>
+    <input id="feedbackContact" type="text" placeholder="Aloqa uchun (ixtiyoriy): email yoki telefon" />
+    <button id="submitFeedbackBtn" type="button" class="feedback-submit">Yuborish</button>
+    <p class="feedback-status" id="feedbackStatus"></p>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const overlay = document.getElementById('feedbackOverlay');
+    const openBtn = document.getElementById('openFeedbackBtn');
+    const closeBtn = document.getElementById('closeFeedbackBtn');
+    const submitBtn = document.getElementById('submitFeedbackBtn');
+    const textEl = document.getElementById('feedbackText');
+    const contactEl = document.getElementById('feedbackContact');
+    const statusEl = document.getElementById('feedbackStatus');
+
+    openBtn.addEventListener('click', () => {
+      overlay.style.display = 'flex';
+      statusEl.textContent = '';
+      statusEl.className = 'feedback-status';
+    });
+    closeBtn.addEventListener('click', () => { overlay.style.display = 'none'; });
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.style.display = 'none'; });
+
+    submitBtn.addEventListener('click', async () => {
+      const text = textEl.value.trim();
+      if (!text) {
+        statusEl.textContent = "Iltimos, fikringizni yozing.";
+        statusEl.className = 'feedback-status err';
+        return;
+      }
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Yuborilmoqda...';
+      try {
+        const res = await fetch('/api/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, contact: contactEl.value.trim() }),
+        });
+        if (!res.ok) throw new Error('failed');
+        statusEl.textContent = "✅ Rahmat! Taklifingiz qabul qilindi.";
+        statusEl.className = 'feedback-status ok';
+        textEl.value = '';
+        contactEl.value = '';
+        setTimeout(() => { overlay.style.display = 'none'; }, 1500);
+      } catch (e) {
+        statusEl.textContent = "Xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring.";
+        statusEl.className = 'feedback-status err';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Yuborish';
+      }
+    });
+  })();
+</script>
 </body>
 </html>
