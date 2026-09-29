@@ -114,6 +114,15 @@
   .report-btn:hover { background:#FBEEEE; }
   .search-hint.suggest { color:var(--vivid); font-weight:700; }
 
+  .stats-bar { background:#F7F9FC; border-bottom:1px solid var(--line); padding:28px 16px; }
+  .stats-bar-inner {
+    max-width:960px; margin:0 auto; display:flex; justify-content:space-around;
+    flex-wrap:wrap; gap:20px; text-align:center;
+  }
+  .stat-item { min-width:110px; }
+  .stat-num { font-size:34px; font-weight:800; color:var(--vivid); line-height:1.1; }
+  .stat-label { font-size:13px; color:var(--muted); margin-top:4px; }
+
   .feedback-open-btn {
     background: #fff; border: 1px solid var(--vivid); color: var(--vivid);
     font-size: 12.5px; font-weight: 700; padding: 6px 14px;
@@ -226,6 +235,27 @@
     <p>Fan va mavzuni kiriting — o'quv materiali, taqdimot, amaliy mashqlar va testlar bir necha soniyada tayyor bo'ladi.</p>
   </div>
 </section>
+
+<div class="stats-bar" id="statsBar">
+  <div class="stats-bar-inner">
+    <div class="stat-item">
+      <div class="stat-num" id="statMaterial">0</div>
+      <div class="stat-label">O'quv materiallari</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num" id="statSlayd">0</div>
+      <div class="stat-label">Taqdimotlar</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num" id="statMashq">0</div>
+      <div class="stat-label">Amaliy mashqlar</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num" id="statTest">0</div>
+      <div class="stat-label">Testlar</div>
+    </div>
+  </div>
+</div>
 
 <div class="wrap">
 
@@ -624,11 +654,18 @@ function presentationText(value) {
 }
 
 async function downloadAsPPTX(deck, reja, images, fan, mavzu, daraja, filename) {
-  // ===== JDPU brendi + universitet taqdimot standarti =====
-  // Format 16:9 (13.33 x 7.5"), shrift Calibri, sarlavha 32-40pt, matn 20-24pt (min 18pt),
-  // 6x6 qoidasi, har slaydda logotip, taqdimotning 40-50% i vizual.
-  const BLUE = '0066FF', CYAN = '00B7FF', DEEP = '004FA6';
-  const ROWBG = 'EFF3F9', INK = '16233A';
+  // ===== JDPU rasmiy 11-slaydli korporativ shablon =====
+  // Ranglar "1-ma'ruza.pptx" namunasidan olingan (XML ichidan tasdiqlangan):
+  const NAVY = '0C2466';       // to'q navy header
+  const BLUE = '0066FF';       // yorqin JDPU ko'k
+  const PURPLE = '2E3092';     // bo'lim sarlavhalari
+  const TEXTBLUE = '1A3A6C';   // asosiy matn ko'ki
+  const LIGHTBG = 'F5F8FF';    // och fon
+  const LIGHTPANEL = 'D6E4F7'; // och ko'k panel
+  const CYAN = '14A5DB';       // cyan aksent
+  const TURQ = '2CC8A1';       // turquoise/yashil aksent
+  const BLUE2 = '1E5FAD';      // ikkinchi ko'k aksent
+  const DARKTEXT = '1A1A2E';   // asosiy qora matn
   const FONT = 'Calibri';
   const W = 13.333, H = 7.5;
 
@@ -637,59 +674,42 @@ async function downloadAsPPTX(deck, reja, images, fan, mavzu, daraja, filename) 
   pres.author = 'Jizzax davlat pedagogika universiteti';
   pres.title = String(mavzu || 'Taqdimot');
 
+  const t = (v) => presentationText(v);
+  const cap = (v, n) => { const s = t(v); return s.length > n ? s.slice(0, n - 1).trim() + '\u2026' : s; };
+  const img = (i) => (images || [])[i] || null;
   const mavzuUp = String(mavzu || '').toUpperCase();
 
-  // Har bir slaydda takrorlanadigan sarlavha paneli va logotip
-  function chrome(s, titleText, opts) {
-    const o = opts || {};
+  // "**qalin**" belgisini pptxgenjs bold-run massiviga aylantiradi
+  function boldRuns(text, baseOpts) {
+    const parts = t(text).split(/\*\*(.+?)\*\*/g);
+    return parts.filter(Boolean).map((p, i) => ({ text: p, options: { ...baseOpts, bold: i % 2 === 1 } }));
+  }
+
+  // Har bir ichki slaydda (2-10) takrorlanadigan header
+  function addHeader(s, title) {
     s.background = { color: 'FFFFFF' };
-    s.addShape(pres.ShapeType.rect, { x: 0, y: 0, w: W, h: 0.92, fill: { color: BLUE }, line: { type: 'none' } });
-    s.addShape(pres.ShapeType.rect, { x: 0, y: 0.92, w: W, h: 0.14, fill: { color: CYAN }, line: { type: 'none' } });
-    s.addImage({ data: JDPU_LOGO, x: 0.34, y: 0.22, w: 1.72, h: 0.43 });
-    s.addText(String(titleText || '').toUpperCase(), {
-      x: 2.35, y: 0, w: W - 3.1, h: 0.92,
-      fontFace: FONT, fontSize: 22, bold: true, color: 'FFFFFF', valign: 'middle', margin: 0,
+    s.addShape(pres.ShapeType.rect, { x: 0, y: 0, w: W, h: 0.85, fill: { color: NAVY }, line: { type: 'none' } });
+    const seg = W / 3;
+    s.addShape(pres.ShapeType.rect, { x: 0, y: 0.85, w: seg, h: 0.05, fill: { color: BLUE }, line: { type: 'none' } });
+    s.addShape(pres.ShapeType.rect, { x: seg, y: 0.85, w: seg, h: 0.05, fill: { color: CYAN }, line: { type: 'none' } });
+    s.addShape(pres.ShapeType.rect, { x: 2 * seg, y: 0.85, w: W - 2 * seg, h: 0.05, fill: { color: TURQ }, line: { type: 'none' } });
+    s.addImage({ data: JDPU_LOGO, x: 0.35, y: 0.19, w: 1.55, h: 0.4 });
+    s.addText(String(title || '').toUpperCase(), {
+      x: 2.05, y: 0, w: W - 4.2, h: 0.85, fontFace: FONT, fontSize: 20, bold: true,
+      color: 'FFFFFF', valign: 'middle', margin: 0, charSpacing: 0.5,
     });
-    if (o.num) {
-      s.addText(String(o.num), {
-        x: W - 0.85, y: H - 0.55, w: 0.55, h: 0.35,
-        fontFace: FONT, fontSize: 12, color: '8FA6C4', align: 'right', margin: 0,
-      });
-    }
+    s.addImage({ data: JDPU_LOGO, x: W - 1.9, y: 0.19, w: 1.55, h: 0.4 });
   }
 
-  // Slayd sarlavhasi — standart bo'yicha 32pt
-  function slideTitle(s, text) {
-    s.addText(String(text || ''), {
-      x: 0.6, y: 1.35, w: W - 1.2, h: 0.75,
-      fontFace: FONT, fontSize: 32, bold: true, color: DEEP, valign: 'middle', margin: 0,
+  function sectionLabel(s, text, x, y, w) {
+    s.addText(String(text || '').toUpperCase(), {
+      x, y, w, h: 0.35, fontFace: FONT, fontSize: 13, bold: true, color: PURPLE, charSpacing: 1.2, margin: 0,
     });
-  }
-
-  // 6x6 qoidasi: ko'pi bilan 6 punkt, har biri ko'pi bilan 6 so'z
-  function sixBySix(list) {
-    return (list || [])
-      .map(t => presentationText(t))
-      .filter(Boolean)
-      .slice(0, 6)
-      .map(t => t.split(/\s+/).slice(0, 6).join(' '));
-  }
-
-  // Punktlar bloki — shrift standart chegarada (20-24pt, min 18pt)
-  function bullets(s, list, box) {
-    const items = sixBySix(list);
-    if (!items.length) return;
-    const fs = items.length >= 6 ? 20 : items.length >= 5 ? 22 : 24;
-    s.addText(items.map(t => ({
-      text: t,
-      options: { bullet: { characterCode: '25AA', indent: 20 }, color: INK, fontSize: fs, breakLine: true, paraSpaceAfter: 12 },
-    })), { x: box.x, y: box.y, w: box.w, h: box.h, fontFace: FONT, valign: 'top', margin: 0 });
   }
 
   let n = 0;
-  const img = (i) => (images || [])[i] || null;
 
-  // ---------- 1) TITUL (muqova) ----------
+  // ========== 1) TITUL ==========
   {
     const s = pres.addSlide();
     s.background = { color: 'FFFFFF' };
@@ -699,200 +719,307 @@ async function downloadAsPPTX(deck, reja, images, fan, mavzu, daraja, filename) 
       fill: { color: BLUE }, line: { type: 'none' },
     });
     s.addImage({ data: WORD_SEAL, x: 9.95, y: 2.35, w: 2.75, h: 2.75 });
-    s.addImage({ data: JDPU_LOGO, x: 0.7, y: 0.6, w: 2.6, h: 0.65 });
+    s.addImage({ data: JDPU_LOGO, x: 0.7, y: 0.55, w: 2.5, h: 0.62 });
     s.addText('JIZZAX DAVLAT PEDAGOGIKA UNIVERSITETI', {
-      x: 0.7, y: 1.55, w: 7.4, h: 0.4, fontFace: FONT, fontSize: 13, bold: true, color: 'BBD6FF', charSpacing: 1, margin: 0,
+      x: 0.7, y: 1.35, w: 7.6, h: 0.4, fontFace: FONT, fontSize: 13, bold: true, color: 'BBD6FF', charSpacing: 1, margin: 0,
     });
-    s.addText(`Fan: ${fan || ''}`, {
-      x: 0.7, y: 2.02, w: 7.2, h: 0.42, fontFace: FONT, fontSize: 18, color: 'DCEAFF', margin: 0,
+    s.addText(`Mavzu: ${mavzu || ''}`, {
+      x: 0.7, y: 1.85, w: 7.6, h: 1.9,
+      fontFace: FONT, fontSize: 26, bold: true, color: 'FFFFFF', valign: 'top', margin: 0, lineSpacingMultiple: 1.1,
     });
-    s.addText(String(mavzu || 'Taqdimot'), {
-      x: 0.7, y: 2.75, w: 7.2, h: 2.4,
-      fontFace: FONT, fontSize: 40, bold: true, color: 'FFFFFF', valign: 'top', margin: 0, lineSpacingMultiple: 1.08,
+    s.addShape(pres.ShapeType.rect, { x: 0.75, y: 3.95, w: 1.5, h: 0.05, fill: { color: CYAN }, line: { type: 'none' } });
+
+    const titul = deck.titul || {};
+    const fields = [
+      ['Fakultet', titul.fakultet],
+      ['Kafedra', titul.kafedra],
+      ['Dars turi', titul.darsTuri || "Ma'ruza"],
+      ['Fan nomi', titul.fanNomi],
+      ['Fan o\u2018qituvchisi', titul.oqituvchi],
+    ];
+    let fy = 4.2;
+    fields.forEach(([label, value]) => {
+      if (!value) return;
+      s.addText([
+        { text: label + ': ', options: { bold: true, color: '9CC0FF' } },
+        { text: t(value), options: { color: 'F0F5FF' } },
+      ], { x: 0.7, y: fy, w: 7.4, h: 0.4, fontFace: FONT, fontSize: 14, margin: 0 });
+      fy += 0.42;
     });
-    s.addShape(pres.ShapeType.rect, { x: 0.75, y: 5.35, w: 1.5, h: 0.06, fill: { color: CYAN }, line: { type: 'none' } });
-    s.addText(`Mashg'ulot turi: ma'ruza  \u00b7  ${daraja || ''}`, {
-      x: 0.7, y: 5.58, w: 7.2, h: 0.42, fontFace: FONT, fontSize: 18, color: 'DCEAFF', margin: 0,
-    });
-    s.addText('O\u2018qituvchi: ______________________', {
-      x: 0.7, y: 6.12, w: 7.2, h: 0.42, fontFace: FONT, fontSize: 18, color: 'BBD6FF', margin: 0,
+
+    const now = new Date();
+    const y0 = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+    s.addText(`${y0}/${y0 + 1} o\u2018quv yili`, {
+      x: 0.7, y: 6.55, w: 7.2, h: 0.4, fontFace: FONT, fontSize: 15, color: 'DCEAFF', margin: 0,
     });
     n++;
   }
 
-  // ---------- 2) KIRISH (motivatsion) ----------
-  if (deck.kirish) {
-    const s = pres.addSlide();
-    chrome(s, mavzuUp, { num: ++n });
-    slideTitle(s, 'Kirish: nega bu mavzu muhim?');
-    s.addShape(pres.ShapeType.roundRect, { x: 0.6, y: 2.3, w: 6.0, h: 1.55, rectRadius: 0.08, fill: { color: DEEP }, line: { type: 'none' } });
-    s.addText(String(deck.kirish.muammo || ''), {
-      x: 0.95, y: 2.3, w: 5.3, h: 1.55,
-      fontFace: FONT, fontSize: 20, bold: true, color: 'FFFFFF', valign: 'middle', margin: 0,
-    });
-    bullets(s, deck.kirish.faktlar, { x: 0.6, y: 4.15, w: 6.0, h: 2.7 });
-    const im = img(0);
-    if (im && im.data) {
-      s.addImage({ data: im.data, x: 7.1, y: 2.3, w: 5.6, h: 4.2, sizing: { type: 'cover', w: 5.6, h: 4.2 } });
-      if (im.credit) s.addText('Rasm: ' + im.credit, { x: 7.1, y: 6.55, w: 5.6, h: 0.3, fontFace: FONT, fontSize: 9, color: '7C8CA3', margin: 0 });
-    } else {
-      s.addShape(pres.ShapeType.roundRect, { x: 7.1, y: 2.3, w: 5.6, h: 4.2, rectRadius: 0.08, fill: { color: ROWBG }, line: { type: 'none' } });
-    }
-    s.addNotes('Motivatsion bosqich. Talabalarga savol bering, javoblarni eshiting, so\u2018ngra mavzuga o\u2018ting.');
-  }
-
-  // ---------- 3) REJA VA KUTILAYOTGAN NATIJALAR ----------
-  if (reja && reja.length) {
-    const s = pres.addSlide();
-    chrome(s, mavzuUp, { num: ++n });
-    slideTitle(s, 'Dars rejasi va kutilayotgan natijalar');
-    s.addText('REJA', { x: 0.6, y: 2.25, w: 5.9, h: 0.35, fontFace: FONT, fontSize: 14, bold: true, color: CYAN, charSpacing: 1.5, margin: 0 });
-    const items = sixBySix(reja);
-    const rowH = Math.min(0.72, (4.0 - (items.length - 1) * 0.12) / Math.max(items.length, 1));
-    items.forEach((r, i) => {
-      const y = 2.75 + i * (rowH + 0.12);
-      s.addShape(pres.ShapeType.roundRect, { x: 0.6, y, w: 5.9, h: rowH, rectRadius: 0.05, fill: { color: ROWBG }, line: { type: 'none' } });
-      s.addText(String(i + 1), { x: 0.75, y, w: 0.5, h: rowH, fontFace: FONT, fontSize: 20, bold: true, color: CYAN, valign: 'middle', align: 'center', margin: 0 });
-      s.addText(r, { x: 1.35, y, w: 5.0, h: rowH, fontFace: FONT, fontSize: 20, color: INK, valign: 'middle', margin: 0 });
-    });
-    s.addText('KUTILAYOTGAN NATIJALAR', { x: 6.9, y: 2.25, w: 5.8, h: 0.35, fontFace: FONT, fontSize: 14, bold: true, color: CYAN, charSpacing: 1.5, margin: 0 });
-    s.addShape(pres.ShapeType.roundRect, { x: 6.9, y: 2.75, w: 5.8, h: 4.0, rectRadius: 0.08, fill: { color: 'F5F9FE' }, line: { color: 'DCE6F2', width: 1 } });
-    bullets(s, deck.natijalar, { x: 7.25, y: 3.0, w: 5.1, h: 3.5 });
-    s.addNotes('Reja bilan tanishtiring va dars oxirida talaba nimalarni bilishi kerakligini aniq ayting.');
-  }
-
-  // ---------- 4) INTERAKTIV KIRISH (aqliy hujum) ----------
-  if (deck.interaktivSavol) {
-    const s = pres.addSlide();
-    chrome(s, mavzuUp, { num: ++n });
-    s.addShape(pres.ShapeType.rect, { x: 0, y: 1.06, w: W, h: H - 1.06, fill: { color: DEEP }, line: { type: 'none' } });
-    s.addText('AQLIY HUJUM', { x: 0.9, y: 1.9, w: 8, h: 0.4, fontFace: FONT, fontSize: 14, bold: true, color: CYAN, charSpacing: 2, margin: 0 });
-    s.addText(presentationText(deck.interaktivSavol), {
-      x: 0.9, y: 2.5, w: 8.4, h: 2.6,
-      fontFace: FONT, fontSize: 30, bold: true, color: 'FFFFFF', valign: 'top', margin: 0, lineSpacingMultiple: 1.15,
-    });
-    s.addShape(pres.ShapeType.roundRect, { x: 10.0, y: 2.4, w: 2.5, h: 2.5, rectRadius: 0.1, fill: { color: 'FFFFFF' }, line: { type: 'none' } });
-    s.addText('QR kod\nshu yerga\njoylanadi', { x: 10.0, y: 2.4, w: 2.5, h: 2.5, fontFace: FONT, fontSize: 14, color: '9AA9BC', align: 'center', valign: 'middle', margin: 0 });
-    s.addText('Mentimeter \u00b7 Quizizz \u00b7 Google Forms', {
-      x: 0.9, y: 5.58, w: 8.4, h: 0.42, fontFace: FONT, fontSize: 18, color: 'BBD6FF', margin: 0,
-    });
-    s.addNotes('Talabalarni so\u2018rovnomaga taklif qiling. Javoblarni ekranda ko\u2018rsatib, qisqacha sharhlang.');
-  }
-
-  // ---------- 5) BO'LIMLAR VA NAZARIY SLAYDLAR ----------
-  (deck.bolimlar || []).forEach((b, bi) => {
-    // Bo'lim ochuvchi rasmli slayd
-    const im = img(bi);
-    const sd = pres.addSlide();
-    sd.background = { color: DEEP };
-    if (im && im.data) {
-      sd.addImage({ data: im.data, x: 0, y: 0, w: W, h: H, sizing: { type: 'cover', w: W, h: H } });
-      sd.addShape(pres.ShapeType.rect, { x: 0, y: 0, w: W, h: H, fill: { color: '00214A', transparency: 60 }, line: { type: 'none' } });
-      sd.addShape(pres.ShapeType.rect, { x: 0, y: H - 3.1, w: W, h: 3.1, fill: { color: '00214A', transparency: 10 }, line: { type: 'none' } });
-    }
-    sd.addImage({ data: JDPU_LOGO, x: 0.6, y: 0.45, w: 1.9, h: 0.48 });
-    sd.addText(String(bi + 1).padStart(2, '0'), {
-      x: 0.9, y: H - 2.95, w: 3, h: 0.75, fontFace: FONT, fontSize: 30, bold: true, color: CYAN, margin: 0,
-    });
-    sd.addShape(pres.ShapeType.rect, { x: 0.95, y: H - 2.12, w: 1.2, h: 0.06, fill: { color: CYAN }, line: { type: 'none' } });
-    sd.addText(presentationText(b.sarlavha), {
-      x: 0.9, y: H - 1.92, w: W - 2.4, h: 1.2,
-      fontFace: FONT, fontSize: 32, bold: true, color: 'FFFFFF', valign: 'top', margin: 0,
-    });
-    if (im && im.credit) {
-      sd.addText('Rasm: ' + im.credit, { x: 0.9, y: H - 0.5, w: W - 1.8, h: 0.3, fontFace: FONT, fontSize: 9, color: 'C3D8F0', margin: 0 });
-    }
-    n++;
-
-    // Nazariy slaydlar — chapda 6x6 punktlar, o'ngda vizual blok
-    (b.slaydlar || []).forEach((sl, si) => {
-      const s = pres.addSlide();
-      chrome(s, mavzuUp, { num: ++n });
-      s.addText(`${bi + 1}. ${presentationText(b.sarlavha)}`, {
-        x: 0.6, y: 1.28, w: W - 1.2, h: 0.3, fontFace: FONT, fontSize: 13, bold: true, color: CYAN, charSpacing: 1, margin: 0,
-      });
-      s.addText(presentationText(sl.sarlavha), {
-        x: 0.6, y: 1.62, w: W - 1.2, h: 0.7, fontFace: FONT, fontSize: 32, bold: true, color: DEEP, valign: 'middle', margin: 0,
-      });
-      bullets(s, sl.punktlar, { x: 0.6, y: 2.6, w: 7.1, h: 4.2 });
-
-      // O'ng ustun — vizual urg'u (standart: 40-50% vizual)
-      s.addShape(pres.ShapeType.roundRect, { x: 8.1, y: 2.55, w: 4.6, h: 4.25, rectRadius: 0.1, fill: { color: 'F5F9FE' }, line: { color: 'DCE6F2', width: 1 } });
-      if (im && im.data && si === 0) {
-        s.addImage({ data: im.data, x: 8.25, y: 2.7, w: 4.3, h: 3.95, sizing: { type: 'cover', w: 4.3, h: 3.95 } });
-      } else {
-        s.addShape(pres.ShapeType.rect, { x: 8.45, y: 2.95, w: 1.1, h: 0.06, fill: { color: CYAN }, line: { type: 'none' } });
-        s.addText('Asosiy g\u2018oya', { x: 8.45, y: 3.2, w: 3.9, h: 0.35, fontFace: FONT, fontSize: 13, bold: true, color: CYAN, charSpacing: 1, margin: 0 });
-        s.addText(sixBySix(sl.punktlar).slice(0, 1)[0] || presentationText(sl.sarlavha), {
-          x: 8.45, y: 3.65, w: 3.9, h: 2.6,
-          fontFace: FONT, fontSize: 22, bold: true, color: DEEP, valign: 'top', margin: 0, lineSpacingMultiple: 1.2,
-        });
-      }
-      // To'liq ilmiy izoh — ma'ruzachi eslatmalarida (slaydni yuklamaydi)
-      if (sl.izoh) s.addNotes(String(sl.izoh));
-    });
-  });
-
-  // ---------- 6) AMALIY TAHLIL / KEYS-STADI ----------
-  if (deck.keys) {
-    const s = pres.addSlide();
-    chrome(s, mavzuUp, { num: ++n });
-    slideTitle(s, 'Amaliy tahlil: keys-stadi');
-    s.addShape(pres.ShapeType.roundRect, { x: 0.6, y: 2.3, w: 7.3, h: 4.4, rectRadius: 0.1, fill: { color: ROWBG }, line: { type: 'none' } });
-    s.addText('VAZIYAT', { x: 0.95, y: 2.55, w: 6.6, h: 0.3, fontFace: FONT, fontSize: 13, bold: true, color: CYAN, charSpacing: 1.5, margin: 0 });
-    s.addText(presentationText(deck.keys.vaziyat), {
-      x: 0.95, y: 2.95, w: 6.6, h: 3.5, fontFace: FONT, fontSize: 20, color: INK, valign: 'top', margin: 0, lineSpacingMultiple: 1.25,
-    });
-    s.addText('MUHOKAMA SAVOLLARI', { x: 8.3, y: 2.3, w: 4.4, h: 0.3, fontFace: FONT, fontSize: 13, bold: true, color: CYAN, charSpacing: 1.5, margin: 0 });
-    bullets(s, deck.keys.savollar, { x: 8.3, y: 2.8, w: 4.4, h: 3.9 });
-    s.addNotes('Kichik guruhlarda 5-7 daqiqa muhokama qildiring, so\u2018ngra har guruhdan bir vakil javob bersin.');
-  }
-
-  // ---------- 7) EKSPRESS-TEST ----------
-  (deck.ekspressTest || []).slice(0, 5).forEach((q, qi) => {
-    const s = pres.addSlide();
-    chrome(s, mavzuUp, { num: ++n });
-    s.addText(`EKSPRESS-TEST \u00b7 ${qi + 1}-savol`, {
-      x: 0.6, y: 1.28, w: 8, h: 0.32, fontFace: FONT, fontSize: 13, bold: true, color: CYAN, charSpacing: 1.5, margin: 0,
-    });
-    s.addText(presentationText(q.savol), {
-      x: 0.6, y: 1.68, w: W - 1.2, h: 1.1, fontFace: FONT, fontSize: 28, bold: true, color: DEEP, valign: 'middle', margin: 0,
-    });
-    const opts = (q.variantlar || []).slice(0, 4);
-    const letters = ['A', 'B', 'C', 'D'];
-    opts.forEach((o, oi) => {
-      const col = oi % 2, row = Math.floor(oi / 2);
-      const x = 0.6 + col * 6.25, y = 3.05 + row * 1.55;
-      s.addShape(pres.ShapeType.roundRect, { x, y, w: 6.0, h: 1.25, rectRadius: 0.08, fill: { color: ROWBG }, line: { type: 'none' } });
-      s.addShape(pres.ShapeType.ellipse, { x: x + 0.28, y: y + 0.33, w: 0.6, h: 0.6, fill: { color: DEEP }, line: { type: 'none' } });
-      s.addText(letters[oi], { x: x + 0.28, y: y + 0.33, w: 0.6, h: 0.6, fontFace: FONT, fontSize: 16, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle', margin: 0 });
-      s.addText(presentationText(o), { x: x + 1.05, y, w: 4.75, h: 1.25, fontFace: FONT, fontSize: 20, color: INK, valign: 'middle', margin: 0 });
-    });
-    const idx = Number(q.togri);
-    s.addNotes(`To\u2018g\u2018ri javob: ${letters[idx] || '?'} \u2014 ${opts[idx] || ''}`);
-  });
-
-  // ---------- 8) XULOSA VA TOPSHIRIQLAR ----------
+  // ========== 2) KIRISH ==========
   {
     const s = pres.addSlide();
-    chrome(s, mavzuUp, { num: ++n });
-    slideTitle(s, 'Xulosa va mustaqil ta\u2018lim topshiriqlari');
-    s.addText('ASOSIY XULOSALAR', { x: 0.6, y: 2.3, w: 6.0, h: 0.3, fontFace: FONT, fontSize: 13, bold: true, color: CYAN, charSpacing: 1.5, margin: 0 });
-    const xs = sixBySix(deck.xulosa).slice(0, 3);
-    xs.forEach((x, i) => {
-      const y = 2.8 + i * 1.25;
-      s.addShape(pres.ShapeType.roundRect, { x: 0.6, y, w: 6.0, h: 1.05, rectRadius: 0.06, fill: { color: ROWBG }, line: { type: 'none' } });
-      s.addShape(pres.ShapeType.ellipse, { x: 0.85, y: y + 0.28, w: 0.5, h: 0.5, fill: { color: CYAN }, line: { type: 'none' } });
-      s.addText(String(i + 1), { x: 0.85, y: y + 0.28, w: 0.5, h: 0.5, fontFace: FONT, fontSize: 14, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle', margin: 0 });
-      s.addText(x, { x: 1.5, y, w: 4.9, h: 1.05, fontFace: FONT, fontSize: 20, color: INK, valign: 'middle', margin: 0 });
+    addHeader(s, 'KIRISH');
+    sectionLabel(s, 'Motivatsion bosqich', 0.55, 1.05, 7.9);
+    const im = img(0);
+    if (im && im.data) {
+      s.addImage({ data: im.data, x: 0.55, y: 1.5, w: 8.0, h: 5.55, sizing: { type: 'cover', w: 8.0, h: 5.55 } });
+    } else {
+      s.addShape(pres.ShapeType.roundRect, { x: 0.55, y: 1.5, w: 8.0, h: 5.55, rectRadius: 0.06, fill: { color: LIGHTBG }, line: { color: LIGHTPANEL, width: 1 } });
+    }
+    sectionLabel(s, 'Qiziqarli savol', 8.75, 1.05, 4.0);
+    const cardColors = [BLUE2, BLUE2, CYAN, TURQ];
+    const savollar = (deck.kirish && deck.kirish.savollar || []).slice(0, 4);
+    const cardH = 1.28, gap = 0.14;
+    savollar.forEach((item, i) => {
+      const y = 1.5 + i * (cardH + gap);
+      const isFirst = i === 0;
+      s.addShape(pres.ShapeType.roundRect, {
+        x: 8.75, y, w: 4.05, h: cardH, rectRadius: 0.06,
+        fill: { color: isFirst ? NAVY : 'FFFFFF' }, line: isFirst ? { type: 'none' } : { color: LIGHTPANEL, width: 1 },
+      });
+      s.addShape(pres.ShapeType.rect, { x: 8.75, y: y + 0.1, w: 0.07, h: cardH - 0.2, fill: { color: cardColors[i] || BLUE2 }, line: { type: 'none' } });
+      s.addText(cap(item.matn, 130), {
+        x: 9.0, y: y + 0.08, w: 3.6, h: cardH - 0.16, fontFace: FONT, fontSize: 13, color: isFirst ? 'FFFFFF' : DARKTEXT,
+        valign: 'middle', margin: 0, lineSpacingMultiple: 1.05,
+      });
     });
-    s.addText('MUSTAQIL TA\u2018LIM', { x: 6.9, y: 2.3, w: 5.8, h: 0.3, fontFace: FONT, fontSize: 13, bold: true, color: CYAN, charSpacing: 1.5, margin: 0 });
-    s.addShape(pres.ShapeType.roundRect, { x: 6.9, y: 2.8, w: 5.8, h: 3.75, rectRadius: 0.08, fill: { color: 'F5F9FE' }, line: { color: 'DCE6F2', width: 1 } });
-    bullets(s, deck.topshiriqlar, { x: 7.25, y: 3.05, w: 5.1, h: 3.25 });
+    s.addNotes('Motivatsion bosqich. Talabalarga savollarni bering, javoblarni tinglang, so\u2018ngra mavzuga o\u2018ting.');
     n++;
   }
 
-  // ---------- 9) YAKUN ----------
+  // ========== 3) DARS REJASI VA KUTILAYOTGAN NATIJALAR ==========
+  {
+    const s = pres.addSlide();
+    addHeader(s, 'Dars rejasi va kutilayotgan natijalar');
+    sectionLabel(s, 'Dars rejasi', 0.55, 1.05, 5.6);
+    const rejaList = (deck.darsRejasi || []).slice(0, 4);
+    const rh = 1.3, rgap = 0.15;
+    rejaList.forEach((item, i) => {
+      const y = 1.55 + i * (rh + rgap);
+      s.addShape(pres.ShapeType.roundRect, { x: 0.55, y, w: 5.6, h: rh, rectRadius: 0.06, fill: { color: LIGHTBG }, line: { color: LIGHTPANEL, width: 1 } });
+      s.addShape(pres.ShapeType.ellipse, { x: 0.75, y: y + rh / 2 - 0.3, w: 0.6, h: 0.6, fill: { color: NAVY }, line: { type: 'none' } });
+      s.addText(String(i + 1), { x: 0.75, y: y + rh / 2 - 0.3, w: 0.6, h: 0.6, fontFace: FONT, fontSize: 18, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle', margin: 0 });
+      s.addText(cap(item, 140), { x: 1.55, y, w: 4.45, h: rh, fontFace: FONT, fontSize: 14, color: TEXTBLUE, valign: 'middle', margin: 0, lineSpacingMultiple: 1.05 });
+    });
+
+    s.addShape(pres.ShapeType.rightArrow, { x: 6.35, y: 3.6, w: 0.55, h: 0.5, fill: { color: TURQ }, line: { type: 'none' } });
+
+    sectionLabel(s, 'Kutilayotgan natijalar', 7.15, 1.05, 5.6);
+    s.addShape(pres.ShapeType.roundRect, { x: 7.15, y: 1.55, w: 5.6, h: 5.5, rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: LIGHTPANEL, width: 1 } });
+    const natList = (deck.natijalar || []).slice(0, 4);
+    const nh = 1.25;
+    natList.forEach((item, i) => {
+      const y = 1.75 + i * (nh + 0.1);
+      s.addText([
+        { text: '\u2705  ', options: { color: TURQ, bold: true } },
+        { text: cap(item, 150), options: { color: TEXTBLUE } },
+      ], { x: 7.4, y, w: 5.1, h: nh, fontFace: FONT, fontSize: 14, valign: 'middle', margin: 0, lineSpacingMultiple: 1.08 });
+    });
+    s.addNotes('Reja bilan tanishtiring va dars oxirida talaba nimalarni bilishi kerakligini aniq ayting.');
+    n++;
+  }
+
+  // ========== 4) AQLIY HUJUM ==========
+  {
+    const s = pres.addSlide();
+    s.background = { color: NAVY };
+    const seg = W / 3;
+    s.addShape(pres.ShapeType.rect, { x: 0, y: 0, w: seg, h: 0.06, fill: { color: BLUE }, line: { type: 'none' } });
+    s.addShape(pres.ShapeType.rect, { x: seg, y: 0, w: seg, h: 0.06, fill: { color: CYAN }, line: { type: 'none' } });
+    s.addShape(pres.ShapeType.rect, { x: 2 * seg, y: 0, w: W - 2 * seg, h: 0.06, fill: { color: TURQ }, line: { type: 'none' } });
+    s.addText('AQLIY HUJUM', { x: 0.7, y: 0.5, w: 8, h: 0.4, fontFace: FONT, fontSize: 14, bold: true, color: CYAN, charSpacing: 2, margin: 0 });
+    const savollar = (deck.aqliyHujum && deck.aqliyHujum.savollar || []).slice(0, 4);
+    s.addText(savollar.map((q, i) => ({
+      text: t(q), options: { breakLine: true, paraSpaceAfter: 10 },
+    })), {
+      x: 0.7, y: 1.0, w: 9.2, h: 1.9, fontFace: FONT, fontSize: 24, bold: true, color: 'FFFFFF', valign: 'top', margin: 0, lineSpacingMultiple: 1.12,
+    });
+    const im = img(1);
+    if (im && im.data) {
+      s.addImage({ data: im.data, x: 1.85, y: 3.0, w: 9.6, h: 4.2, sizing: { type: 'cover', w: 9.6, h: 4.2 } });
+    } else {
+      s.addShape(pres.ShapeType.roundRect, { x: 1.85, y: 3.0, w: 9.6, h: 4.2, rectRadius: 0.06, fill: { color: '13306E' }, line: { type: 'none' } });
+    }
+    s.addNotes('Talabalarni ochiq muhokamaga taklif qiling. Javoblarni eshiting, keyin mavzuga o\u2018ting.');
+    n++;
+  }
+
+  // ========== 5) MINDMAP ==========
+  {
+    const s = pres.addSlide();
+    addHeader(s, 'Mindmap');
+    const modules = ((deck.mindmap && deck.mindmap.modullar) || []).slice(0, 7);
+    const cx = W / 2, cy = 4.35, cw = 2.6, ch = 1.0;
+    s.addShape(pres.ShapeType.roundRect, { x: cx - cw / 2, y: cy - ch / 2, w: cw, h: ch, rectRadius: 0.08, fill: { color: NAVY }, line: { type: 'none' } });
+    s.addText(mavzuUp, { x: cx - cw / 2 + 0.1, y: cy - ch / 2, w: cw - 0.2, h: ch, fontFace: FONT, fontSize: 13, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle', margin: 0 });
+
+    const palette = [BLUE, TURQ, BLUE2, CYAN, PURPLE, '59D790', BLUE];
+    const mw = 3.35, mh = 1.55;
+    // 7 modulni markaz atrofida halqa shaklida joylashtiramiz
+    const positions = [
+      { x: cx - mw / 2, y: 1.15 },
+      { x: cx - mw - 0.3, y: 1.55 },
+      { x: cx + 0.3, y: 1.55 },
+      { x: 0.5, y: 3.55 },
+      { x: W - mw - 0.5, y: 3.55 },
+      { x: cx - mw - 0.3, y: 5.7 },
+      { x: cx + 0.3, y: 5.7 },
+    ];
+    modules.forEach((mod, i) => {
+      const pos = positions[i] || positions[positions.length - 1];
+      const color = palette[i % palette.length];
+      // markazdan modulga ingichka bog'lovchi chiziq
+      s.addShape(pres.ShapeType.line, {
+        x: Math.min(cx, pos.x + mw / 2), y: Math.min(cy, pos.y + mh / 2),
+        w: Math.abs(cx - (pos.x + mw / 2)) || 0.01, h: Math.abs(cy - (pos.y + mh / 2)) || 0.01,
+        line: { color: 'C7D5EC', width: 1.5 },
+      });
+      s.addShape(pres.ShapeType.roundRect, { x: pos.x, y: pos.y, w: mw, h: mh, rectRadius: 0.07, fill: { color: LIGHTBG }, line: { color, width: 1.5 } });
+      s.addShape(pres.ShapeType.rect, { x: pos.x, y: pos.y, w: mw, h: 0.06, fill: { color }, line: { type: 'none' } });
+      s.addText(cap(mod.sarlavha, 40), { x: pos.x + 0.12, y: pos.y + 0.1, w: mw - 0.24, h: 0.32, fontFace: FONT, fontSize: 12, bold: true, color: PURPLE, margin: 0 });
+      s.addText(cap(mod.izoh, 110), { x: pos.x + 0.12, y: pos.y + 0.42, w: mw - 0.24, h: mh - 0.75, fontFace: FONT, fontSize: 9.5, color: DARKTEXT, margin: 0, lineSpacingMultiple: 1.05 });
+      if (mod.misol) {
+        s.addText(cap(mod.misol, 40), { x: pos.x + 0.12, y: pos.y + mh - 0.32, w: mw - 0.24, h: 0.28, fontFace: FONT, fontSize: 9.5, bold: true, italic: true, color, margin: 0 });
+      }
+    });
+    n++;
+  }
+
+  // ========== 6) GLOSSARIY ==========
+  {
+    const s = pres.addSlide();
+    addHeader(s, 'Tayanch tushunchalar (glossariy)');
+    const terms = (deck.glossariy || []).slice(0, 6);
+    const cols = 2, colW = 6.0, colGap = 0.3;
+    const rowH = 1.72, rowGap = 0.16;
+    terms.forEach((tm, i) => {
+      const col = i % cols, row = Math.floor(i / cols);
+      const x = 0.55 + col * (colW + colGap);
+      const y = 1.15 + row * (rowH + rowGap);
+      const accent = col === 0 ? BLUE2 : CYAN;
+      s.addShape(pres.ShapeType.roundRect, { x, y, w: colW, h: rowH, rectRadius: 0.06, fill: { color: LIGHTBG }, line: { color: LIGHTPANEL, width: 1 } });
+      s.addShape(pres.ShapeType.rect, { x, y: y + 0.1, w: 0.06, h: rowH - 0.2, fill: { color: accent }, line: { type: 'none' } });
+      s.addText(cap(tm.termin, 40), { x: x + 0.3, y: y + 0.14, w: colW - 0.55, h: 0.4, fontFace: FONT, fontSize: 15, bold: true, color: NAVY, margin: 0 });
+      s.addText(cap(tm.tarif, 170), { x: x + 0.3, y: y + 0.58, w: colW - 0.55, h: rowH - 0.72, fontFace: FONT, fontSize: 11.5, color: DARKTEXT, margin: 0, lineSpacingMultiple: 1.12 });
+    });
+    n++;
+  }
+
+  // ========== 7) ASOSIY BAYON (NAZARIY QISM) ==========
+  {
+    const s = pres.addSlide();
+    addHeader(s, 'Asosiy bayon (nazariy qism)');
+    s.addShape(pres.ShapeType.roundRect, { x: 0.55, y: 1.05, w: W - 1.1, h: 0.85, rectRadius: 0.06, fill: { color: NAVY }, line: { type: 'none' } });
+    s.addText(cap((deck.asosiyBayon && deck.asosiyBayon.goya) || '', 160), {
+      x: 0.85, y: 1.05, w: W - 1.7, h: 0.85, fontFace: FONT, fontSize: 15, bold: true, italic: true, color: 'FFFFFF', valign: 'middle', margin: 0,
+    });
+
+    const blocks = ((deck.asosiyBayon && deck.asosiyBayon.bolimlar) || []).slice(0, 5);
+    const bw = (W - 1.1 - 4 * 0.2) / 5;
+    const by = 2.15, bh = 3.9;
+    const palette = [BLUE, BLUE2, CYAN, TURQ, PURPLE];
+    blocks.forEach((b, i) => {
+      const x = 0.55 + i * (bw + 0.2);
+      const color = palette[i % palette.length];
+      s.addShape(pres.ShapeType.roundRect, { x, y: by, w: bw, h: bh, rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: LIGHTPANEL, width: 1 } });
+      s.addShape(pres.ShapeType.ellipse, { x: x + bw / 2 - 0.28, y: by + 0.18, w: 0.56, h: 0.56, fill: { color }, line: { type: 'none' } });
+      s.addText(String(i + 1), { x: x + bw / 2 - 0.28, y: by + 0.18, w: 0.56, h: 0.56, fontFace: FONT, fontSize: 18, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle', margin: 0 });
+      s.addText(cap(b.sarlavha, 50), { x: x + 0.12, y: by + 0.9, w: bw - 0.24, h: 0.55, fontFace: FONT, fontSize: 11.5, bold: true, color: PURPLE, align: 'center', margin: 0, lineSpacingMultiple: 1.05 });
+      s.addText(cap(b.matn, 140), { x: x + 0.12, y: by + 1.5, w: bw - 0.24, h: bh - 2.0, fontFace: FONT, fontSize: 9.5, color: DARKTEXT, margin: 0, lineSpacingMultiple: 1.08 });
+      if (b.misol) {
+        s.addText(cap(b.misol, 40), { x: x + 0.12, y: by + bh - 0.42, w: bw - 0.24, h: 0.35, fontFace: FONT, fontSize: 9, bold: true, color, margin: 0 });
+      }
+    });
+
+    s.addText(cap((deck.asosiyBayon && deck.asosiyBayon.xulosaJumla) || '', 130), {
+      x: 0.55, y: by + bh + 0.15, w: W - 1.1, h: 0.5, fontFace: FONT, fontSize: 13, bold: true, italic: true, color: TEXTBLUE, align: 'center', margin: 0,
+    });
+    n++;
+  }
+
+  // ========== 8) AMALIY TAHLIL VA KEYS-STADI ==========
+  {
+    const s = pres.addSlide();
+    addHeader(s, 'Amaliy tahlil va keys-stadi');
+    s.addShape(pres.ShapeType.roundRect, { x: 0.8, y: 1.4, w: W - 1.6, h: 4.1, rectRadius: 0.06, fill: { color: 'F0F5FC' }, line: { color: 'C5D9F0', width: 1 } });
+    s.addShape(pres.ShapeType.rect, { x: 0.8, y: 1.55, w: 0.07, h: 3.8, fill: { color: TURQ }, line: { type: 'none' } });
+    s.addText(boldRuns((deck.keysStadi && deck.keysStadi.matn) || '', { color: TEXTBLUE }), {
+      x: 1.15, y: 1.65, w: W - 2.2, h: 3.7, fontFace: FONT, fontSize: 17, valign: 'top', margin: 0, lineSpacingMultiple: 1.25,
+    });
+    s.addShape(pres.ShapeType.roundRect, { x: 0.8, y: 5.75, w: W - 1.6, h: 1.1, rectRadius: 0.06, fill: { color: NAVY }, line: { type: 'none' } });
+    s.addText('\u2753  ' + cap((deck.keysStadi && deck.keysStadi.savol) || '', 140), {
+      x: 1.1, y: 5.75, w: W - 2.2, h: 1.1, fontFace: FONT, fontSize: 16, bold: true, color: 'FFFFFF', valign: 'middle', margin: 0,
+    });
+    n++;
+  }
+
+  // ========== 9) KEYS-STADI YECHIMI ==========
+  {
+    const s = pres.addSlide();
+    addHeader(s, 'Amaliy tahlil va keys-stadi');
+    const ky = deck.keysYechimi || {};
+    const steps = [{ nomi: 'Shart', matn: ky.shart }].concat((ky.bosqichlar || []).slice(0, 3));
+    const total = steps.length + 1; // + natija
+    const gap = 0.25;
+    const boxW = (W - 1.1 - (total - 1) * gap) / total;
+    const boxY = 1.6, boxH = 3.6;
+    const palette = [BLUE2, BLUE, CYAN, TURQ];
+    steps.forEach((st, i) => {
+      const x = 0.55 + i * (boxW + gap);
+      const color = palette[i % palette.length];
+      s.addShape(pres.ShapeType.roundRect, { x, y: boxY, w: boxW, h: boxH, rectRadius: 0.06, fill: { color: LIGHTBG }, line: { color, width: 1.5 } });
+      s.addText(cap(st.nomi, 30), { x: x + 0.1, y: boxY + 0.15, w: boxW - 0.2, h: 0.45, fontFace: FONT, fontSize: 12, bold: true, color, align: 'center', margin: 0 });
+      s.addText(cap(st.matn, 150), { x: x + 0.1, y: boxY + 0.65, w: boxW - 0.2, h: boxH - 0.8, fontFace: FONT, fontSize: 10, color: DARKTEXT, margin: 0, lineSpacingMultiple: 1.1 });
+      if (i < total - 1) {
+        s.addShape(pres.ShapeType.rightArrow, { x: x + boxW + 0.03, y: boxY + boxH / 2 - 0.15, w: gap - 0.06, h: 0.3, fill: { color: 'B9C7DE' }, line: { type: 'none' } });
+      }
+    });
+    // Natija
+    {
+      const i = steps.length;
+      const x = 0.55 + i * (boxW + gap);
+      s.addShape(pres.ShapeType.roundRect, { x, y: boxY, w: boxW, h: boxH, rectRadius: 0.06, fill: { color: NAVY }, line: { type: 'none' } });
+      s.addText('NATIJA', { x: x + 0.1, y: boxY + 0.15, w: boxW - 0.2, h: 0.4, fontFace: FONT, fontSize: 12, bold: true, color: TURQ, align: 'center', margin: 0 });
+      s.addText(cap(ky.natija, 150), { x: x + 0.1, y: boxY + 0.6, w: boxW - 0.2, h: boxH - 0.75, fontFace: FONT, fontSize: 10, color: 'FFFFFF', margin: 0, lineSpacingMultiple: 1.1 });
+    }
+    s.addShape(pres.ShapeType.roundRect, { x: 0.55, y: boxY + boxH + 0.2, w: W - 1.1, h: 0.85, rectRadius: 0.06, fill: { color: LIGHTPANEL }, line: { type: 'none' } });
+    s.addText([{ text: 'XULOSA:  ', options: { bold: true, color: NAVY } }, { text: cap(ky.xulosa, 160), options: { color: TEXTBLUE } }], {
+      x: 0.8, y: boxY + boxH + 0.2, w: W - 1.6, h: 0.85, fontFace: FONT, fontSize: 13, valign: 'middle', margin: 0,
+    });
+    n++;
+  }
+
+  // ========== 10) XULOSA ==========
+  {
+    const s = pres.addSlide();
+    addHeader(s, 'Xulosa');
+    const xul = deck.xulosa || {};
+    s.addShape(pres.ShapeType.roundRect, { x: 0.55, y: 1.1, w: 8.2, h: 0.6, rectRadius: 0.05, fill: { color: NAVY }, line: { type: 'none' } });
+    s.addText('DARSNING ASOSIY XULOSALARI', { x: 0.55, y: 1.1, w: 8.2, h: 0.6, fontFace: FONT, fontSize: 14, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle', margin: 0 });
+    s.addText(cap(xul.matn, 500), { x: 0.55, y: 1.9, w: 8.2, h: 3.2, fontFace: FONT, fontSize: 14, color: TEXTBLUE, valign: 'top', margin: 0, lineSpacingMultiple: 1.25 });
+    s.addText([{ text: "ASOSIY G\u2018OYA: ", options: { bold: true, color: NAVY } }, { text: cap(xul.asosiyGoya, 160), options: { italic: true, color: TEXTBLUE } }], {
+      x: 0.55, y: 5.2, w: 8.2, h: 1.2, fontFace: FONT, fontSize: 14, valign: 'top', margin: 0, lineSpacingMultiple: 1.2,
+    });
+
+    s.addShape(pres.ShapeType.roundRect, { x: 9.0, y: 1.1, w: 3.75, h: 0.6, rectRadius: 0.05, fill: { color: NAVY }, line: { type: 'none' } });
+    s.addText('\ud83d\udcdd MUSTAQIL TA\u2018LIM', { x: 9.0, y: 1.1, w: 3.75, h: 0.6, fontFace: FONT, fontSize: 12, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle', margin: 0 });
+    s.addShape(pres.ShapeType.roundRect, { x: 9.0, y: 1.85, w: 3.75, h: 4.55, rectRadius: 0.05, fill: { color: 'FBF6EC' }, line: { color: 'ECE0C8', width: 1 } });
+    const items = [
+      ['\ud83d\udcd6 O\u2018qish', xul.oqish],
+      ['\ud83d\udd0d Tadqiqot', xul.tadqiqot],
+      ['\ud83c\udf10 Online', 'lib.jdpu.uz'],
+    ];
+    let iy = 2.05;
+    items.forEach(([label, val]) => {
+      if (!val) return;
+      s.addText(label, { x: 9.25, y: iy, w: 3.3, h: 0.32, fontFace: FONT, fontSize: 12, bold: true, color: NAVY, margin: 0 });
+      s.addText(cap(val, 130), { x: 9.25, y: iy + 0.32, w: 3.3, h: 0.85, fontFace: FONT, fontSize: 10.5, color: DARKTEXT, margin: 0, lineSpacingMultiple: 1.1 });
+      iy += 1.35;
+    });
+    n++;
+  }
+
+  // ========== 11) YAKUNIY SAHIFA ==========
   {
     const s = pres.addSlide();
     s.background = { color: BLUE };
@@ -902,8 +1029,8 @@ async function downloadAsPPTX(deck, reja, images, fan, mavzu, daraja, filename) 
       x: 0.85, y: 2.7, w: 9.0, h: 2.0,
       fontFace: FONT, fontSize: 40, bold: true, color: 'FFFFFF', valign: 'middle', margin: 0, lineSpacingMultiple: 1.15,
     });
-    s.addText('Jizzax davlat pedagogika universiteti  \u00b7  jdpu.uz', {
-      x: 0.85, y: 6.2, w: 8, h: 0.4, fontFace: FONT, fontSize: 14, color: 'CBE0FF', margin: 0,
+    s.addText('Jizzax davlat pedagogika universiteti  \u00b7  jdpu.uz  \u00b7  lib.jdpu.uz', {
+      x: 0.85, y: 6.2, w: 9, h: 0.4, fontFace: FONT, fontSize: 14, color: 'CBE0FF', margin: 0,
     });
   }
 
@@ -998,7 +1125,7 @@ async function handleWordClick(type, btn) {
 function showDownloadButtons(type) {
   const box = document.querySelector(`[data-actions="${type}"]`);
   box.style.display = 'block';
-  const hasSlides = type === 'slayd' && deckData[type] && Array.isArray(deckData[type].bolimlar) && deckData[type].bolimlar.length > 0;
+  const hasSlides = type === 'slayd' && deckData[type] && deckData[type].titul && deckData[type].mindmap && Array.isArray(deckData[type].mindmap.modullar) && deckData[type].mindmap.modullar.length > 0;
 
   // Taqdimot uchun faqat PPTX beriladi — slayd PDF/Word'da mazmunsiz chiqadi.
   // (Agar model kutilgan formatda javob bermasa, material yo'qolib qolmasligi uchun
@@ -1497,6 +1624,23 @@ document.getElementById('mavzuPreset').addEventListener('change', (e) => {
 document.getElementById('fan').addEventListener('input', syncMavzuPresetWithFanInput);
 
 loadCurriculum();
+
+// #16: Bosh sahifa tepasidagi "N marta yaratildi" statistika paneli.
+// api/stats.js dan sonlarni oladi va ko'rsatadi; xato bo'lsa jim tarzda
+// 0 bilan qoladi (sahifa ishlashiga ta'sir qilmaydi).
+async function loadStats() {
+  try {
+    const res = await fetch('/api/stats');
+    const data = await res.json();
+    document.getElementById('statMaterial').textContent = data.material || 0;
+    document.getElementById('statSlayd').textContent = data.slayd || 0;
+    document.getElementById('statMashq').textContent = data.mashq || 0;
+    document.getElementById('statTest').textContent = data.test || 0;
+  } catch (e) {
+    // statistika ixtiyoriy
+  }
+}
+loadStats();
 
 render();
 checkPendingPayment();
