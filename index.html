@@ -114,7 +114,7 @@
   .report-btn:hover { background:#FBEEEE; }
   .search-hint.suggest { color:var(--vivid); font-weight:700; }
 
-  .stats-bar { background:#F7F9FC; border-bottom:1px solid var(--line); padding:28px 16px; }
+  .stats-bar { background:#F7F9FC; border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:36px 16px; }
   .stats-bar-inner {
     max-width:960px; margin:0 auto; display:flex; justify-content:space-around;
     flex-wrap:wrap; gap:20px; text-align:center;
@@ -122,6 +122,36 @@
   .stat-item { min-width:110px; }
   .stat-num { font-size:34px; font-weight:800; color:var(--vivid); line-height:1.1; }
   .stat-label { font-size:13px; color:var(--muted); margin-top:4px; }
+
+  .testimonials { background:#fff; padding:56px 16px; }
+  .testimonials-inner { max-width:1080px; margin:0 auto; text-align:center; }
+  .testimonials-eyebrow {
+    display:inline-block; font-size:11.5px; font-weight:700; letter-spacing:.04em;
+    color:var(--vivid); background:#EAF1FF; padding:5px 14px; border-radius:20px; margin-bottom:14px;
+  }
+  .testimonials-inner h2 { font-size:26px; color:var(--deep); margin:0 0 8px; }
+  .testimonials-sub { font-size:14px; color:var(--muted); max-width:520px; margin:0 auto 32px; line-height:1.6; }
+  .testimonials-grid {
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));
+    gap:20px; text-align:left;
+  }
+  .testimonial-card {
+    background:#F7F9FC; border:1px solid var(--line); border-radius:14px; padding:22px;
+    display:flex; flex-direction:column;
+  }
+  .quote-icon {
+    width:34px; height:34px; border-radius:8px; background:#EAF1FF; color:var(--vivid);
+    font-size:20px; font-weight:800; display:flex; align-items:center; justify-content:center; margin-bottom:12px;
+  }
+  .stars { color:#F5A623; font-size:14px; letter-spacing:2px; margin-bottom:10px; }
+  .testimonial-text { font-size:13.5px; color:var(--ink); line-height:1.6; flex:1; margin:0 0 16px; }
+  .testimonial-author { display:flex; align-items:center; gap:10px; border-top:1px solid var(--line); padding-top:14px; }
+  .author-avatar {
+    width:36px; height:36px; border-radius:50%; background:#EAF1FF; color:var(--vivid);
+    font-weight:700; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .author-name { font-size:13px; font-weight:700; color:var(--ink); }
+  .author-role { font-size:11.5px; color:var(--muted); }
 
   .feedback-open-btn {
     background: #fff; border: 1px solid var(--vivid); color: var(--vivid);
@@ -235,27 +265,6 @@
     <p>Fan va mavzuni kiriting — o'quv materiali, taqdimot, amaliy mashqlar va testlar bir necha soniyada tayyor bo'ladi.</p>
   </div>
 </section>
-
-<div class="stats-bar" id="statsBar">
-  <div class="stats-bar-inner">
-    <div class="stat-item">
-      <div class="stat-num" id="statMaterial">0</div>
-      <div class="stat-label">O'quv materiallari</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-num" id="statSlayd">0</div>
-      <div class="stat-label">Taqdimotlar</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-num" id="statMashq">0</div>
-      <div class="stat-label">Amaliy mashqlar</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-num" id="statTest">0</div>
-      <div class="stat-label">Testlar</div>
-    </div>
-  </div>
-</div>
 
 <div class="wrap">
 
@@ -1640,11 +1649,82 @@ async function loadStats() {
     // statistika ixtiyoriy
   }
 }
-loadStats();
+// Statistika bloki HTML'da shu skriptdan KEYIN joylashgan (footer oldida
+// ko'rinishi uchun), shuning uchun elementlar hali mavjud bo'lmasligi
+// mumkin — DOMContentLoaded orqali butun sahifa tayyor bo'lgach chaqiramiz.
+document.addEventListener('DOMContentLoaded', loadStats);
 
 render();
 checkPendingPayment();
 </script>
+
+<div class="stats-bar" id="statsBar">
+  <div class="stats-bar-inner">
+    <div class="stat-item">
+      <div class="stat-num" id="statMaterial">0</div>
+      <div class="stat-label">O'quv materiallari</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num" id="statSlayd">0</div>
+      <div class="stat-label">Taqdimotlar</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num" id="statMashq">0</div>
+      <div class="stat-label">Amaliy mashqlar</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num" id="statTest">0</div>
+      <div class="stat-label">Testlar</div>
+    </div>
+  </div>
+</div>
+
+<section class="testimonials">
+  <div class="testimonials-inner">
+    <span class="testimonials-eyebrow">💬 SHARHLAR</span>
+    <h2>Foydalanuvchilarning fikrlari</h2>
+    <p class="testimonials-sub">Platformadan muntazam foydalanayotgan o'qituvchilar tizim haqida nima deydi.</p>
+    <div class="testimonials-grid">
+      <div class="testimonial-card">
+        <div class="quote-icon">"</div>
+        <div class="stars">★★★★★</div>
+        <p class="testimonial-text">Namuna sharh: Dars materiallarini tayyorlash uchun ketadigan vaqtim sezilarli qisqardi — endi asosiy e'tiborimni talabalar bilan ishlashga qarataman.</p>
+        <div class="testimonial-author">
+          <div class="author-avatar">?</div>
+          <div>
+            <div class="author-name">Namuna ism</div>
+            <div class="author-role">Fakultet, kafedra nomi</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="quote-icon">"</div>
+        <div class="stars">★★★★★</div>
+        <p class="testimonial-text">Namuna sharh: Test va mashqlar bir necha soniyada tayyor bo'ladi, formulalar ham to'g'ri chiqadi. Juda qulay vosita bo'ldi.</p>
+        <div class="testimonial-author">
+          <div class="author-avatar">?</div>
+          <div>
+            <div class="author-name">Namuna ism</div>
+            <div class="author-role">Fakultet, kafedra nomi</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="quote-icon">"</div>
+        <div class="stars">★★★★★</div>
+        <p class="testimonial-text">Namuna sharh: Taqdimotlar universitet uslubiga to'liq mos chiqadi, qayta formatlashga hojat qolmaydi.</p>
+        <div class="testimonial-author">
+          <div class="author-avatar">?</div>
+          <div>
+            <div class="author-name">Namuna ism</div>
+            <div class="author-role">Fakultet, kafedra nomi</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <footer class="site-footer">
   <div class="footer-inner">
     <div>
