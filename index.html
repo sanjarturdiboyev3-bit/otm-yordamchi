@@ -1,6 +1,17 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
+<script>
+  // Sahifa chizilishidan OLDIN mavzuni o'rnatamiz — aks holda bir lahza
+  // yorug' rejim ko'rinib, keyin qorong'iga o'tib ketadi (miltillash).
+  (function () {
+    try {
+      const saved = localStorage.getItem('theme');
+      const theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      if (theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+    } catch (e) {}
+  })();
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>O'qituvchi Yordamchisi</title>
@@ -24,6 +35,19 @@
     --page:#F2F6FC;      /* sovuq akademik fon */
     --tint:#F5F9FE;      /* natija bloklari foni */
   }
+  /* ===== Qorong'i rejim — asosiy sirt/matn/chegara ranglari almashtiriladi,
+     brend ranglari (--deep/--vivid/--cyan) ikkala rejimda ham bir xil qoladi
+     chunki ular allaqachon quyuq fonlarda ham yaxshi ko'rinadi. ===== */
+  [data-theme="dark"]{
+    --ink:#E7ECF7;
+    --muted:#96A3BE;
+    --line:#2B3654;
+    --surface:#18213A;
+    --page:#0D1424;
+    --tint:#1B2440;
+  }
+  [data-theme="dark"] body::before { background-image:radial-gradient(rgba(120,170,255,.06) 1px, transparent 1px); }
+  [data-theme="dark"] .watermark { opacity:.05; }
   * { box-sizing: border-box; }
   body { margin:0; background:var(--page); font-family:'Manrope',sans-serif; color:var(--ink); position:relative;
     min-height:100vh; display:flex; flex-direction:column; }
@@ -47,6 +71,13 @@
   .uni-seal { width:34px; height:34px; flex-shrink:0; background:#fff; border-radius:50%; padding:2px; }
   .uni-name { font-size:12px; font-weight:800; color:#fff; letter-spacing:1.6px; line-height:1.3; margin:0; text-transform:uppercase; }
   .uni-name span { display:block; font-size:9.5px; font-weight:600; color:#9EC8F5; letter-spacing:1.2px; }
+  .theme-toggle {
+    margin-left:auto; flex-shrink:0; width:30px; height:30px; border-radius:50%;
+    border:1px solid rgba(255,255,255,.3); background:rgba(255,255,255,.08); color:#fff;
+    font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    transition:background .15s ease;
+  }
+  .theme-toggle:hover { background:rgba(255,255,255,.18); }
 
   /* ===== Hero ===== */
   .hero { position:relative; overflow:hidden; background:linear-gradient(115deg,var(--deep) 0%,#0059C2 55%,var(--vivid) 100%); }
@@ -89,10 +120,10 @@
     font-size:12.5px; color:var(--muted); background:#FAFBFD; cursor:pointer;
   }
   .preset-select:disabled { cursor:not-allowed; opacity:.6; }
-  .preset-select.has-items { color:var(--ink); background:#fff; border-color:var(--vivid); }
+  .preset-select.has-items { color:var(--ink); background:var(--surface); border-color:var(--vivid); }
   .search-hint { font-size:11px; color:var(--muted); margin:4px 0 0 24px; }
   label { display:block; font-size:11px; font-weight:700; color:var(--muted); margin-bottom:5px; letter-spacing:.6px; }
-  input, select { width:100%; padding:10px 12px; border-radius:9px; border:1px solid var(--line); font-family:inherit; font-size:14px; color:var(--ink); background:#fff; }
+  input, select { width:100%; padding:10px 12px; border-radius:9px; border:1px solid var(--line); font-family:inherit; font-size:14px; color:var(--ink); background:var(--surface); }
   input:focus, select:focus { outline:2px solid var(--cyan); outline-offset:1px; border-color:transparent; }
   /* Materiallar 4 ta bo'lgani uchun ustunlar 1 → 2 → 4 tartibida o'zgaradi.
      3 ustun o'tkazib yuboriladi: aks holda oxirgi karta yolg'iz qolib, qator nomutanosib bo'ladi.
@@ -110,9 +141,29 @@
   button.generate:hover { filter:brightness(1.12); }
   button.generate:disabled { background:#C9D8EC; color:#fff; cursor:not-allowed; }
   .error-text { color:#B23A3A; font-size:12px; margin-top:8px; }
-  .report-btn { display:none; margin-top:10px; padding:6px 10px; border-radius:8px; border:1px solid var(--line); background:#fff; color:#B23A3A; font-size:11.5px; font-weight:700; cursor:pointer; }
+  .report-btn { display:none; margin-top:10px; padding:6px 10px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:#B23A3A; font-size:11.5px; font-weight:700; cursor:pointer; }
   .report-btn:hover { background:#FBEEEE; }
   .search-hint.suggest { color:var(--vivid); font-weight:700; }
+
+  .examples { background:var(--page); padding:56px 16px; }
+  .examples-inner { max-width:1080px; margin:0 auto; text-align:center; }
+  .example-badge {
+    display:inline-block; font-size:11.5px; font-weight:700; letter-spacing:.04em;
+    color:var(--vivid); background:#EAF1FF; padding:5px 14px; border-radius:20px; margin-bottom:14px;
+  }
+  .examples-inner h2 { font-size:26px; color:var(--deep); margin:0 0 8px; }
+  .examples-sub { font-size:14px; color:var(--muted); max-width:560px; margin:0 auto 32px; line-height:1.6; }
+  .examples-grid {
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr));
+    gap:18px; text-align:left;
+  }
+  .example-card {
+    background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:20px;
+  }
+  .example-icon { font-size:26px; margin-bottom:10px; }
+  .example-card h3 { font-size:14.5px; color:var(--deep); margin:0 0 8px; }
+  .example-excerpt { font-size:12.5px; color:var(--muted); line-height:1.6; margin:0; }
+  .example-excerpt strong { color:var(--ink); }
 
   .stats-bar { background:#F7F9FC; border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:36px 16px; }
   .stats-bar-inner {
@@ -123,7 +174,7 @@
   .stat-num { font-size:34px; font-weight:800; color:var(--vivid); line-height:1.1; }
   .stat-label { font-size:13px; color:var(--muted); margin-top:4px; }
 
-  .testimonials { background:#fff; padding:56px 16px; }
+  .testimonials { background:var(--surface); padding:56px 16px; }
   .testimonials-inner { max-width:1080px; margin:0 auto; text-align:center; }
   .testimonials-eyebrow {
     display:inline-block; font-size:11.5px; font-weight:700; letter-spacing:.04em;
@@ -154,11 +205,11 @@
   .author-role { font-size:11.5px; color:var(--muted); }
 
   .feedback-open-btn {
-    background: #fff; border: 1px solid var(--vivid); color: var(--vivid);
+    background: var(--surface); border: 1px solid var(--vivid); color: var(--vivid);
     font-size: 12.5px; font-weight: 700; padding: 6px 14px;
     border-radius: 20px; cursor: pointer; white-space: nowrap; flex-shrink: 0;
   }
-  .feedback-open-btn:hover { background: #EAF1FF; }
+  .feedback-open-btn:hover { background: var(--tint); }
   .feedback-open-btn.footer-variant {
     background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.3); color: #fff;
   }
@@ -168,7 +219,7 @@
     z-index: 999; align-items: center; justify-content: center; padding: 16px;
   }
   .feedback-modal {
-    background: #fff; border-radius: 16px; padding: 26px; max-width: 420px;
+    background: var(--surface); border-radius: 16px; padding: 26px; max-width: 420px;
     width: 100%; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,.25);
   }
   .feedback-modal h3 { margin: 0 0 6px; font-size: 17px; color: var(--deep); }
@@ -204,7 +255,7 @@
   .result-box hr, .full-content hr { border:none; border-top:1px solid var(--line); margin:14px 0; }
   .result-box .katex-display, .full-content .katex-display { margin:10px 0; overflow-x:auto; overflow-y:hidden; }
   .actions-row { display:flex; gap:8px; margin-top:10px; }
-  .btn-download { flex:1; padding:9px; border-radius:9px; border:1.5px solid var(--accent-soft,var(--line)); background:#fff; color:var(--accent,var(--deep)); font-weight:700; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:background .18s ease; }
+  .btn-download { flex:1; padding:9px; border-radius:9px; border:1.5px solid var(--accent-soft,var(--line)); background:var(--surface); color:var(--accent,var(--deep)); font-weight:700; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:background .18s ease; }
   .btn-download:hover { background:var(--accent-tint,var(--tint)); }
   .btn-download:disabled { opacity:0.55; cursor:not-allowed; }
   .pay-gate { margin-top:16px; padding:14px; border-radius:10px; background:#E9F4FF; border:1px solid #BFDDFA; text-align:center; }
@@ -244,6 +295,17 @@
   .footer-bar-inner { width:100%; margin:0 auto; padding:14px clamp(16px,2.6vw,52px);
     display:flex; flex-wrap:wrap; gap:8px 20px; justify-content:space-between;
     font-size:12px; color:#93B7DC; }
+  /* ===== Qorong'i rejim uchun aniq tuzatishlar — quyidagilar ochiq-ko'k
+     "tint" fonlar edi (badge, kartochka, ikonka), qorong'i fonda dog'dek
+     ko'rinib qolmasligi uchun alohida qiymat beriladi. ===== */
+  [data-theme="dark"] .preset-select { background:var(--surface); }
+  [data-theme="dark"] .stats-bar { background:var(--tint); }
+  [data-theme="dark"] .testimonials-eyebrow { background:rgba(0,102,255,.18); }
+  [data-theme="dark"] .testimonial-card { background:var(--tint); }
+  [data-theme="dark"] .quote-icon,
+  [data-theme="dark"] .author-avatar { background:rgba(0,102,255,.18); }
+  [data-theme="dark"] .example-card,
+  [data-theme="dark"] .example-badge { background:var(--tint); }
 </style>
 </head>
 <body>
@@ -254,6 +316,7 @@
     <p class="uni-name">Jizzax davlat pedagogika universiteti
       <span>Jizzakh state pedagogical university</span>
     </p>
+    <button id="themeToggle" type="button" class="theme-toggle" title="Qorong'i/yorug' rejim" aria-label="Qorong'i/yorug' rejimni almashtirish">🌙</button>
   </div>
 </div>
 
@@ -1448,9 +1511,22 @@ async function generate(type) {
 
   errorEl.style.display = 'none';
   btn.disabled = true;
-  btn.innerHTML = useSearch
-    ? '<span class="spin"></span> Internetdan izlanmoqda...'
-    : '<span class="spin"></span> Yaratilmoqda...';
+
+  // #17: Statik "Yaratilmoqda..." o'rniga bosqichma-bosqich almashinuvchi
+  // xabarlar — kutish vaqti psixologik jihatdan qisqaroq tuyuladi va
+  // foydalanuvchiga jarayon haqida tasavvur beradi. Xabarlar taxminiy vaqt
+  // bo'yicha tartiblangan (real generatsiya bosqichlariga mos).
+  const PROGRESS_STEPS = useSearch
+    ? ["Internetdan qidirilmoqda...", "Mavzu tahlil qilinmoqda...", "Matn yozilmoqda...", "Tekshirilmoqda...", "Yakunlanmoqda..."]
+    : (type === 'test'
+        ? ["Mavzu tahlil qilinmoqda...", "Savollar tuzilmoqda...", "Javoblar tekshirilmoqda...", "Yakunlanmoqda..."]
+        : ["Mavzu tahlil qilinmoqda...", "Matn yozilmoqda...", "Formatlanmoqda...", "Yakunlanmoqda..."]);
+  let stepIdx = 0;
+  btn.innerHTML = `<span class="spin"></span> ${PROGRESS_STEPS[0]}`;
+  const progressTimer = setInterval(() => {
+    stepIdx = Math.min(stepIdx + 1, PROGRESS_STEPS.length - 1);
+    btn.innerHTML = `<span class="spin"></span> ${PROGRESS_STEPS[stepIdx]}`;
+  }, 4000);
 
   try {
     const res = await fetch('/api/generate', {
@@ -1504,6 +1580,7 @@ async function generate(type) {
     errorEl.textContent = "Xatolik yuz berdi. Qayta urinib ko'ring.";
     errorEl.style.display = 'block';
   } finally {
+    clearInterval(progressTimer);
     btn.disabled = false;
     btn.innerHTML = '✨ Yaratish';
   }
@@ -1654,9 +1731,60 @@ async function loadStats() {
 // mumkin — DOMContentLoaded orqali butun sahifa tayyor bo'lgach chaqiramiz.
 document.addEventListener('DOMContentLoaded', loadStats);
 
+// #18: Qorong'i/yorug' rejim almashtirgich. Boshlang'ich holat <head>dagi
+// tezkor skriptda allaqachon o'rnatilgan (miltillashsiz); bu yerda faqat
+// tugma bosilganda almashtirish va belgini (oy/quyosh) yangilash bor.
+function applyThemeIcon() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const btn = document.getElementById('themeToggle');
+  if (btn) btn.textContent = isDark ? '☀️' : '🌙';
+}
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  if (isDark) {
+    document.documentElement.removeAttribute('data-theme');
+    localStorage.setItem('theme', 'light');
+  } else {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    localStorage.setItem('theme', 'dark');
+  }
+  applyThemeIcon();
+});
+applyThemeIcon();
+
 render();
 checkPendingPayment();
 </script>
+
+<section class="examples">
+  <div class="examples-inner">
+    <span class="example-badge">🔍 NAMUNA</span>
+    <h2>Natija qanday ko'rinishda chiqadi?</h2>
+    <p class="examples-sub">Hali birorta material yaratmagan bo'lsangiz ham, har bir turning qanday chiqishini shu yerda ko'rishingiz mumkin.</p>
+    <div class="examples-grid">
+      <div class="example-card">
+        <div class="example-icon">📄</div>
+        <h3>O'quv materiali</h3>
+        <p class="example-excerpt">"<strong>Kirish.</strong> Chiziqli tenglamalar matematikaning eng asosiy va amaliy ahamiyatga ega bo'limlaridan biri bo'lib, u ko'plab fan sohalarida — fizika, iqtisodiyot, muhandislik va boshqa yo'nalishlarda — muhim rol o'ynaydi..."</p>
+      </div>
+      <div class="example-card">
+        <div class="example-icon">🖥️</div>
+        <h3>Taqdimot slaydlari</h3>
+        <p class="example-excerpt">11 ta slayd: titul, kirish, dars rejasi, aqliy hujum, mindmap, glossariy, nazariy qism, keys-stadi, yechim, xulosa — JDPU korporativ dizaynida, tayyor PowerPoint fayli.</p>
+      </div>
+      <div class="example-card">
+        <div class="example-icon">✏️</div>
+        <h3>Amaliy mashqlar</h3>
+        <p class="example-excerpt">"<strong>1-masala.</strong> 2x + 5 = 13 tenglamani yeching. <strong>Yechim:</strong> Har ikki tomondan 5 ni ayiramiz: 2x = 8. Ikkala tomonni 2 ga bo'lamiz: x = 4..."</p>
+      </div>
+      <div class="example-card">
+        <div class="example-icon">✅</div>
+        <h3>Test savollari</h3>
+        <p class="example-excerpt">"<strong>3-savol.</strong> 3x - 7 = 8 tenglamaning ildizi nechaga teng? A) 3  B) 5  C) 7  D) 9. <em>Javoblar kaliti AI tomonidan avtomatik tekshiriladi.</em>"</p>
+      </div>
+    </div>
+  </div>
+</section>
 
 <div class="stats-bar" id="statsBar">
   <div class="stats-bar-inner">
