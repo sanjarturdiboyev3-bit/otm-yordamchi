@@ -100,6 +100,21 @@
     border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; font-size: 12.5px;
   }
   .material-item .meta { color: var(--muted); }
+
+  .totals-grid { display:flex; flex-wrap:wrap; gap:14px; }
+  .total-card {
+    flex:1; min-width:110px; background:var(--bg); border:1px solid var(--line);
+    border-radius:10px; padding:14px; text-align:center;
+  }
+  .total-num { font-size:26px; font-weight:800; color:var(--deep); line-height:1.1; }
+  .total-label { font-size:11.5px; color:var(--muted); margin-top:4px; }
+  .chart-day-labels { display:flex; margin-top:4px; }
+  .chart-day-labels span {
+    flex:1; font-size:9.5px; color:var(--muted); text-align:center; white-space:nowrap;
+  }
+  .chart-legend { display:flex; gap:16px; margin-top:14px; flex-wrap:wrap; }
+  .legend-item { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text); }
+  .legend-dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
 </style>
 </head>
 <body>
@@ -123,6 +138,8 @@
     <div class="tab" data-tab="reports">⚠️ Xato hisobotlari <span class="count-badge" id="cReports">0</span></div>
     <div class="tab" data-tab="curriculum">📚 Fan/Mavzular</div>
     <div class="tab" data-tab="materials">📁 Materiallar</div>
+    <div class="tab" data-tab="backup">🛡️ Zaxira nusxa</div>
+    <div class="tab" data-tab="analytics">📊 Analitika</div>
   </div>
   <div class="panel active" id="panelSuggestions">
     <div id="listSuggestions"></div>
@@ -182,6 +199,28 @@
     <div class="section-block">
       <h3>🗂 Materiali bor barcha mavzular</h3>
       <div id="materialsOverview" class="hint">Yuklanmoqda...</div>
+    </div>
+  </div>
+
+  <div class="panel" id="panelBackup">
+    <div class="section-block">
+      <h3>🛡️ To'liq zaxira nusxa</h3>
+      <p class="hint">Barcha ma'lumotlar (o'quv dasturi, materiallar, takliflar, xato hisobotlari, statistika) faqat Upstash Redis'da saqlanadi. Agar u bilan muammo bo'lsa, hech narsa qolmasligi mumkin — shuning uchun vaqti-vaqti bilan (masalan haftasiga bir marta) zaxira nusxa olib, xavfsiz joyda (kompyuteringiz yoki Google Drive) saqlab qo'ying.</p>
+      <button class="btn-primary" id="backupBtn">⬇️ Zaxira nusxani yuklab olish (.json)</button>
+      <div class="upload-status" id="backupStatus"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panelAnalytics">
+    <div class="section-block">
+      <h3>📊 Umumiy sonlar</h3>
+      <div id="analyticsTotals" class="hint">Yuklanmoqda...</div>
+    </div>
+    <div class="section-block">
+      <h3>📈 So'nggi 30 kunlik dinamika</h3>
+      <p class="hint">Har bir ustun bir kunni bildiradi; rang — material turini.</p>
+      <div id="analyticsChart"></div>
+      <div id="analyticsLegend" class="chart-legend"></div>
     </div>
   </div>
 </div>
@@ -274,9 +313,10 @@
       tab.classList.add('active');
       document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
       const which = tab.dataset.tab;
-      const panelMap = { suggestions: 'panelSuggestions', reports: 'panelReports', curriculum: 'panelCurriculum', materials: 'panelMaterials' };
+      const panelMap = { suggestions: 'panelSuggestions', reports: 'panelReports', curriculum: 'panelCurriculum', materials: 'panelMaterials', backup: 'panelBackup', analytics: 'panelAnalytics' };
       document.getElementById(panelMap[which]).classList.add('active');
       if (which === 'materials') loadMaterialsOverview();
+      if (which === 'analytics') loadAnalytics();
     });
   });
 
@@ -501,6 +541,118 @@
     } catch (e) {
       el.innerHTML = `<span class="hint">Xatolik: ${esc(e.message)}</span>`;
     }
+  }
+
+  // ===================== Zaxira nusxa =====================
+  document.getElementById('backupBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('backupBtn');
+    const statusEl = document.getElementById('backupStatus');
+    btn.disabled = true; btn.textContent = 'Tayyorlanmoqda...';
+    statusEl.textContent = ''; statusEl.className = 'upload-status';
+    try {
+      const res = await fetch('/api/admin-backup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Xatolik');
+      }
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `otm-yordamchi-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      statusEl.textContent = '✅ Zaxira nusxa yuklab olindi. Uni xavfsiz joyda saqlang (Google Drive, kompyuter va h.k.).';
+      statusEl.className = 'upload-status ok';
+    } catch (e) {
+      statusEl.textContent = e.message;
+      statusEl.className = 'upload-status err';
+    } finally {
+      btn.disabled = false; btn.textContent = "⬇️ Zaxira nusxani yuklab olish (.json)";
+    }
+  });
+
+  // ===================== Analitika =====================
+  const TYPE_COLORS = { material: '#1660FF', slayd: '#14A5DB', mashq: '#2CC8A1', test: '#F5A623' };
+  const TYPE_LABELS = { material: "O'quv materiali", slayd: 'Taqdimot', mashq: 'Amaliy mashq', test: 'Test' };
+
+  async function loadAnalytics() {
+    const totalsEl = document.getElementById('analyticsTotals');
+    const chartEl = document.getElementById('analyticsChart');
+    const legendEl = document.getElementById('analyticsLegend');
+    totalsEl.innerHTML = 'Yuklanmoqda...';
+    chartEl.innerHTML = '';
+    try {
+      const res = await fetch('/api/admin-analytics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Xatolik');
+
+      const types = data.types || [];
+      const totals = data.totals || {};
+      const grandTotal = types.reduce((s, t) => s + (totals[t] || 0), 0);
+
+      totalsEl.innerHTML = `
+        <div class="totals-grid">
+          <div class="total-card"><div class="total-num">${grandTotal}</div><div class="total-label">Jami yaratilgan</div></div>
+          ${types.map(t => `
+            <div class="total-card">
+              <div class="total-num" style="color:${TYPE_COLORS[t]}">${totals[t] || 0}</div>
+              <div class="total-label">${esc(TYPE_LABELS[t] || t)}</div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+
+      renderChart(chartEl, data.daily || [], types);
+
+      legendEl.innerHTML = types.map(t => `
+        <span class="legend-item"><span class="legend-dot" style="background:${TYPE_COLORS[t]}"></span>${esc(TYPE_LABELS[t] || t)}</span>
+      `).join('');
+    } catch (e) {
+      totalsEl.innerHTML = `<span class="hint">Xatolik: ${esc(e.message)}</span>`;
+    }
+  }
+
+  function renderChart(container, daily, types) {
+    if (!daily.length) { container.innerHTML = '<span class="hint">Ma\'lumot yo\'q</span>'; return; }
+    const maxVal = Math.max(1, ...daily.map(d => types.reduce((s, t) => s + (d[t] || 0), 0)));
+    const barW = 100 / daily.length;
+    const chartH = 140; // viewBox birliklarida (SVG ichida, matn YO'Q — proporsional cho'zilish matnni buzib qo'yishi mumkin edi)
+
+    const bars = daily.map((d, i) => {
+      let yOffset = 0;
+      return types.map(t => {
+        const val = d[t] || 0;
+        if (val === 0) return '';
+        const h = (val / maxVal) * chartH;
+        const y = chartH - yOffset - h;
+        yOffset += h;
+        return `<rect x="${(i * barW).toFixed(2)}" y="${y.toFixed(1)}" width="${(barW * 0.72).toFixed(2)}" height="${h.toFixed(1)}" fill="${TYPE_COLORS[t]}" rx="1"><title>${esc(d.day)} — ${esc(TYPE_LABELS[t])}: ${val}</title></rect>`;
+      }).join('');
+    }).join('');
+
+    container.innerHTML = `
+      <svg viewBox="0 0 100 ${chartH}" preserveAspectRatio="none" style="width:100%; height:160px; display:block;">
+        ${bars}
+      </svg>
+      <div class="chart-day-labels">
+        ${daily.map((d, i) => {
+          const show = (i % 5 === 0 || i === daily.length - 1);
+          return `<span>${show ? esc(d.day.slice(5)) : ''}</span>`;
+        }).join('')}
+      </div>
+    `;
   }
 </script>
 </body>
